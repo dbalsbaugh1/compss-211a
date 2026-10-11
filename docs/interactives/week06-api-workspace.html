@@ -221,6 +221,19 @@ const STEPS = [
                     ['city == record["geo"]["city"]', 'city should be the value stored under city, inside geo.']]},
    hint: 'The first blank is <code>works_count</code> and the second is <code>city</code>.',
    after: 'That is a key, and a key inside a key.'},
+  {topic: 'When a request goes wrong', stage: 'basics', live: true, optional: true,
+   intro: ['Optional. Read the status code before the body. It says how the request went:',
+           '<b>200</b>: the server accepted the request.<br><b>400</b>: something in the request is wrong, such as a parameter.<br><b>401</b> or <b>403</b>: a key is missing or not allowed.<br><b>404</b>: nothing is at that address.<br><b>429</b>: too many requests.<br><b>500</b> and up: the server has a problem. Wait and try again.',
+           'With a code of 400 or higher, the body often says what is wrong.'],
+   example: 'import requests\n\nresponse = requests.get("https://api.openalex.org/worksz", timeout=30)\nprint(response.status_code)\nprint(response.text[:100])\n\nresponse = requests.get("https://api.openalex.org/works?per_page=500", timeout=30)\nprint(response.status_code)\nprint(response.text[:100])',
+   task: 'Run the example. The first address is misspelled, and the second asks for more works at a time than OpenAlex allows. Then run the code in the box: its address is misspelled too. Fix the address so that <code>status</code> is 200.',
+   starter: 'import requests\n\nresponse = requests.get("https://api.openalex.org/institutionz/I95457486", timeout=30)\nstatus = response.status_code\nprint(status)',
+   answer: 'import requests\n\nresponse = requests.get("https://api.openalex.org/institutions/I95457486", timeout=30)\nstatus = response.status_code\nprint(status)',
+   check: {truths: [['status != 429', 'OpenAlex answered 429: this network has used up its requests for today. Choose Simulated OpenAlex above the steps and run the code again.'],
+                    ['status != 404', 'status is 404: nothing is at that address. Check the spelling of institutions.'],
+                    ['status == 200', 'status should be 200. Take it from response.status_code, and check the address.']]},
+   hint: 'The address should say <code>institutions</code>, not <code>institutionz</code>.',
+   after: 'A 404 is about the address. A 400 is about what you sent to a correct address.'},
   {topic: 'Write a request with parameters', stage: 'request',
    intro: ['To ask for a list of records, you send parameters with the request. The address they go to is the endpoint. For works it is <code>https://api.openalex.org/works</code>.',
            'The parameters go in a dictionary, and <code>urlencode</code> turns it into the text after the <code>?</code> in the address. <code>filter</code> picks the works, <code>sort</code> puts the most-cited first (<code>desc</code>: from high to low), <code>per_page</code> is how many to send at a time, and <code>cursor</code> is the page: <code>*</code> is the first.'],
@@ -491,7 +504,7 @@ def _ws_truths(user_ns, spec_json):
 # It answers the requests in the steps with the saved copies: the record of one institution, and the works request
 # with its next page. A wrong request gets the status code and body that the actual OpenAlex gave for it on October 7, 2026.
 _WS_ROOT = "${ROOT}"
-_WS_SIM = {"real_send": None, "count": 0}
+_WS_SIM = {"real_send": None, "count": 0, "limited": False}
 _WS_SIM_PARAMS = "apc_sum, api-key, api_key, cited_by_count_sum, corpus, cursor, data-version, data_version, filter, format, group-by, group-bys, group_by, group_bys, include-xpac, include_xpac, mailto, page, per-page, per_page, q, rerank, sample, search, seed, select, sort, warm"
 _WS_SIM_FILTER = {"institutions.id:I95457486", "publication_year:2024", "has_abstract:true"}
 _WS_SIM_OUTSIDE = (501, {"error": "Simulated OpenAlex", "message": "The simulated OpenAlex only answers the requests in the steps of this workspace: the record of institution I95457486, and the works request (2024, sorted by cited_by_count:desc, five per page) with its next page. Choose Actual OpenAlex above the steps to send other requests."})
@@ -570,18 +583,35 @@ def _ws_sim_send(self, request, **kwargs):
     response.request = request
     return response
 
+def _ws_actual_send(self, request, **kwargs):
+    # Sends the request. A 429 from OpenAlex means the network has used up its requests for the day,
+    # so a request from the steps is then answered from the saved copy, and the page is told to switch.
+    from urllib.parse import urlsplit
+    response = _WS_SIM["real_send"](self, request, **kwargs)
+    if response.status_code == 429 and urlsplit(request.url).hostname == "api.openalex.org":
+        simulated = _ws_sim_send(self, request, **kwargs)
+        if simulated.status_code != 501:
+            _WS_SIM["limited"] = True
+            return simulated
+        _WS_SIM["count"] -= 1
+    return response
+
 def _ws_source(mode):
     # Every request that requests sends passes through Session.send, so that is the one place to switch.
     _WS_SIM["count"] = 0
+    _WS_SIM["limited"] = False
     if "requests" not in sys.modules:
         return
     sessions = sys.modules["requests"].sessions
     if _WS_SIM["real_send"] is None:
         _WS_SIM["real_send"] = sessions.Session.send
-    sessions.Session.send = _ws_sim_send if mode == "simulated" else _WS_SIM["real_send"]
+    sessions.Session.send = _ws_sim_send if mode == "simulated" else _ws_actual_send
 
 def _ws_sim_count():
     return _WS_SIM["count"]
+
+def _ws_limited():
+    return _WS_SIM["limited"]
 `;
 
 let pythonReady = null, helpersLoaded = false;
@@ -612,7 +642,7 @@ const SOURCE_STORE = 'compss211a-week06-api-source';
 const SOURCES = {
   actual: {line: 'They are sent over the internet to api.openalex.org.',
            short: 'Requests go to the <b>actual OpenAlex</b>, over the internet. If one fails, choose Simulated OpenAlex above the steps.',
-           budget: 'Requests go to the <b>actual OpenAlex</b>, over the internet. Run this once or twice, not many times: OpenAlex limits how many list requests a network can send in a day, and the class shares one network. If one fails, choose Simulated OpenAlex above the steps.'},
+           budget: 'Requests go to the <b>actual OpenAlex</b>, over the internet. Run this once or twice, not many times: OpenAlex limits how many list requests a network can send in a day, and the class shares one network. Past the limit it answers with the status code 429, which means too many requests. This page then switches to the simulated OpenAlex.'},
   simulated: {line: 'They stay in your browser. The response is built from a saved copy.',
               short: 'Requests go to the <b>simulated OpenAlex</b>. They stay in your browser, and the response is built from a saved, shortened copy of the actual one.',
               budget: 'Requests go to the <b>simulated OpenAlex</b>. They stay in your browser, and the response is built from a copy of the actual response, saved on October 7, 2026.'}
@@ -641,7 +671,7 @@ async function execute(code, step, live) {
   const ok = await Sandbox.capture(() => py.globals.get('_ws_run')(code, ns), sink);
   if (cut) html += '\n<span class="dim">The output is longer than this box shows. Print a smaller part.</span>';
   if (!html) html = '<span class="dim">(no output)</span>';
-  return {ok, html, ns, py, simulated: py.globals.get('_ws_sim_count')() > 0};
+  return {ok, html, ns, py, simulated: py.globals.get('_ws_sim_count')() > 0, limited: py.globals.get('_ws_limited')()};
 }
 // What a common error message means, in a sentence. The Python message stays above it.
 function explainError(html) {
@@ -702,7 +732,15 @@ function save() {
 function restore() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-    if (!saved || !Array.isArray(saved.code) || saved.code.length !== STEPS.length) return;
+    if (!saved || !Array.isArray(saved.code)) return;
+    // State saved before the step at ADDED was put in: make room for it, and move the later steps up by one.
+    const ADDED = 3;
+    if (saved.code.length === STEPS.length - 1) {
+      saved.code.splice(ADDED, 0, null);
+      for (const name of ['solved', 'tried']) saved[name] = (saved[name] || []).map(i => i >= ADDED ? i + 1 : i);
+      if (Number.isInteger(saved.current) && saved.current >= ADDED) saved.current += 1;
+    }
+    if (saved.code.length !== STEPS.length) return;
     saved.code.forEach((text, i) => { if (typeof text === 'string' && STEPS[i].answer) $(`s${i}-code`).value = text; });
     for (const [name, set] of [['solved', solved], ['tried', tried]])
       (saved[name] || []).forEach(i => { if (Number.isInteger(i) && i >= 0 && i < STEPS.length) set.add(i); });
@@ -786,7 +824,11 @@ async function runBox(button) {
   try {
     result = await execute(code, act === 'scratch' ? null : s, live);
     const plain = result.ok ? '' : explainError(result.html);
-    out.innerHTML = result.html + (result.simulated ? `${/\n$/.test(result.html) ? '' : '\n'}<span class="dim">Answered by the simulated OpenAlex.</span>` : '');
+    // A 429 from the actual OpenAlex: the rest of this visit uses the simulated one. The choice is not saved.
+    if (result.limited) setSource('simulated', false);
+    const answeredBy = result.limited ? 'OpenAlex answered with the status code 429, which means too many requests: this network has used up its requests for today. The simulated OpenAlex answered this one, and the page now uses it.'
+      : result.simulated ? 'Answered by the simulated OpenAlex.' : '';
+    out.innerHTML = result.html + (answeredBy ? `${/\n$/.test(result.html) ? '' : '\n'}<span class="dim">${answeredBy}</span>` : '');
     if (act !== 'run' && act !== 'check') return;
     if (act === 'run') {
       if (plain) setFeedback(fb, 'bad', esc(plain)); else fb.className = 'feedback';
