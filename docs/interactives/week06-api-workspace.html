@@ -183,7 +183,7 @@ const LIVE_SETUP = 'import pyodide_http\npyodide_http.patch_all()\nimport reques
 // live: the step sends a request; where it goes follows the “Requests go to” switch.
 // check.labels: what to call an expression in a message. check.truths: for a live request, tests on the student's own result, because a second request would give a different response.
 // pre: code run before the student's code, for a value an earlier step made. live: the step sends a real request.
-// example: code that is shown and can be run. after: shown once the answer is correct. optional: labelled, and left out of the count of checked steps.
+// example: code that is shown and can be run. after: shown once the answer is correct.
 // stage: where the step sits in Basics, Request, Response, Read values, Every work, Table. intro and after can be a list of paragraphs.
 const STEPS = [
   {topic: 'Send a GET request', stage: 'basics', live: true,
@@ -209,20 +209,20 @@ const STEPS = [
                     ['name == record.get("display_name")', 'name should be the value stored under the key display_name.']]},
    hint: 'The first blank is <code>json</code>. The name is stored under <code>display_name</code>.',
    after: '<code>I95457486</code> is the ID that OpenAlex gives UC Berkeley. <a href="https://api.openalex.org/institutions/I95457486" target="_blank" rel="noopener">Open the address in a new tab</a> to see the whole body.'},
-  {topic: 'Read more of the record', stage: 'basics', live: true, optional: true,
-   intro: ['Optional practice with the same record. <code>list(record.keys())</code> lists its keys, and square brackets with a key give one value.',
+  {topic: 'Read more of the record', stage: 'basics', live: true,
+   intro: ['More practice with the same record. <code>list(record.keys())</code> lists its keys, and square brackets with a key give one value.',
            'A value can be a dictionary itself, with its own keys. Then use brackets a second time.'],
    example: 'import requests\n\nresponse = requests.get("https://api.openalex.org/institutions/I95457486")\nrecord = response.json()\nprint(list(record.keys()))\nprint(record["works_count"])\nprint(record["geo"])',
-   task: 'Run the example. <code>works_count</code> is how many works OpenAlex has with a Berkeley author. <code>geo</code> is a dictionary that says where Berkeley is. Then make <code>n_works</code>: the number of works, and <code>city</code>: the city, from inside <code>geo</code>.',
+   task: 'Run the example. <code>works_count</code> is how many works OpenAlex has with a Berkeley author. <code>geo</code> is a dictionary that says where Berkeley is. Then make <code>n_works</code>: the value under the key <code>works_count</code>, and <code>city</code>: the value under the key <code>city</code>, inside <code>geo</code>.',
    starter: 'import requests\n\nresponse = requests.get("https://api.openalex.org/institutions/I95457486")\nrecord = response.json()\nn_works = record["____"]\ncity = record["geo"]["____"]\nprint(n_works, city)',
    answer: 'import requests\n\nresponse = requests.get("https://api.openalex.org/institutions/I95457486")\nrecord = response.json()\nn_works = record["works_count"]\ncity = record["geo"]["city"]\nprint(n_works, city)',
    check: {truths: [['response.status_code != 429', 'OpenAlex answered 429: this network has used up its requests for today. Choose Simulated OpenAlex above the steps and run the code again.'],
                     ['n_works == record["works_count"]', 'n_works should be the value stored under the key works_count.'],
                     ['city == record["geo"]["city"]', 'city should be the value stored under city, inside geo.']]},
-   hint: 'The first blank is <code>works_count</code> and the second is <code>city</code>.',
+   hint: 'Each blank takes the name of a key, not a value. The first is <code>works_count</code> and the second is <code>city</code>.',
    after: 'That is a key, and a key inside a key.'},
-  {topic: 'When a request goes wrong', stage: 'basics', live: true, optional: true,
-   intro: ['Optional. Read the status code before the body. It says how the request went:',
+  {topic: 'When a request goes wrong', stage: 'basics', live: true,
+   intro: ['Read the status code before the body. It says how the request went:',
            '<b>200</b>: the server accepted the request.<br><b>400</b>: something in the request is wrong, such as a parameter.<br><b>401</b> or <b>403</b>: a key is missing or not allowed.<br><b>404</b>: nothing is at that address.<br><b>429</b>: too many requests.<br><b>500</b> and up: the server has a problem. Wait and try again.',
            'With a code of 400 or higher, the body often says what is wrong.'],
    example: 'import requests\n\nresponse = requests.get("https://api.openalex.org/worksz", timeout=30)\nprint(response.status_code)\nprint(response.text[:100])\n\nresponse = requests.get("https://api.openalex.org/works?per_page=500", timeout=30)\nprint(response.status_code)\nprint(response.text[:100])',
@@ -715,7 +715,7 @@ function renderSteps() {
       <details id="s${i}-answer" hidden><summary>One possible answer</summary><pre class="answer">${esc(s.answer)}</pre></details>
       <p class="small" id="s${i}-answer-wait">One possible answer appears here after you have checked an answer of your own.</p>`;
     return `<section class="q" id="s${i}" aria-labelledby="s${i}-title" hidden>
-      <div class="level">Step ${i + 1} of ${STEPS.length}${s.optional ? ' · Optional' : ''}</div>
+      <div class="level">Step ${i + 1} of ${STEPS.length}</div>
       <h2 id="s${i}-title" tabindex="-1">${esc(s.topic)}</h2>
       ${[].concat(s.intro || []).map(text => `<p>${text}</p>`).join('')}
       ${example}
@@ -753,7 +753,7 @@ function restore() {
 function show(i, focus = true) {
   current = Math.max(0, Math.min(STEPS.length - 1, i));
   STEPS.forEach((_, n) => { $(`s${n}`).hidden = n !== current; });
-  $('picker').innerHTML = STEPS.map((s, n) => `<option value="${n}"${n === current ? ' selected' : ''}>${n + 1}. ${esc(s.topic)}${s.optional ? ' (optional)' : ''}${solved.has(n) ? ' ✓' : ''}</option>`).join('');
+  $('picker').innerHTML = STEPS.map((s, n) => `<option value="${n}"${n === current ? ' selected' : ''}>${n + 1}. ${esc(s.topic)}${solved.has(n) ? ' ✓' : ''}</option>`).join('');
   $('prev').disabled = current === 0;
   $('next').disabled = current === STEPS.length - 1;
   STEPS.forEach((s, n) => {
@@ -767,7 +767,7 @@ function show(i, focus = true) {
   // The strip above the step: which part of the work this step belongs to.
   const stages = [...$('stages').children], at = stages.findIndex(li => li.dataset.stage === STEPS[current].stage);
   stages.forEach((li, n) => { li.classList.toggle('done', n < at); if (n === at) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); });
-  const main = STEPS.map((s, n) => n).filter(n => STEPS[n].answer && !STEPS[n].optional);
+  const main = STEPS.map((s, n) => n).filter(n => STEPS[n].answer);
   $('progress').textContent = `${main.filter(n => solved.has(n)).length} of ${main.length} checked`;
   if (focus) $(`s${current}-title`).focus();
   save();
