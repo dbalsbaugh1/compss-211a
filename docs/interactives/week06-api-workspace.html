@@ -698,8 +698,8 @@ function renderSteps() {
   $('steps').innerHTML = STEPS.map((s, i) => {
     const example = s.example ? `<div class="example"><div class="label">Example</div><pre>${esc(s.example)}</pre></div>
       <p><button data-act="example" data-q="${i}" disabled>Run the example</button></p><pre class="out" id="s${i}-example"></pre>` : '';
-    const work = s.handoff ? `<p>Open <code>week06_openalex_practice.ipynb</code>, in the <code>lessons/week06_web-apis</code> folder of the course repo.</p>
-        <p><a class="button" href="https://github.com/macss-berkeley/compss-211a/tree/main/lessons/week06_web-apis" target="_blank" rel="noopener">See the folder on GitHub</a></p>`
+    const work = s.handoff ? `<p>Open <code>lab06_openalex_api_acquisition.ipynb</code>, in the <code>lab</code> folder of the course repo.</p>
+        <p><a class="button" href="https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab06_openalex_api_acquisition.ipynb" target="_blank" rel="noopener">Open Lab 6 on GitHub</a></p>`
       : `<h4>Your turn</h4><p class="task">${s.task}</p>
       <label class="small" for="s${i}-code">Your code</label>
       <textarea id="s${i}-code" spellcheck="false" autocomplete="off" rows="${Math.max(6, (s.scaffold || s.starter).split('\n').length + 1)}">${esc(s.starter)}</textarea>

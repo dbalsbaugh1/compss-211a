@@ -242,8 +242,8 @@ export const skills = [
     "weeks": "Weeks 5–6",
     "releaseWeek": 5,
     "activity": null,
-    "practice": "Week 6 practice notebook — Go one level at a time through a nested OpenAlex response.",
-    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week06_web-apis/week06_openalex_practice.ipynb"
+    "practice": "Lab 6 — Go one level at a time through a nested OpenAlex response.",
+    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab06_openalex_api_acquisition.ipynb"
   },
   {
     "id": "other-file-formats",
@@ -297,8 +297,8 @@ export const skills = [
     "weeks": "Week 6",
     "releaseWeek": 6,
     "activity": null,
-    "practice": "Week 6 practice notebook — Send a request with parameters, check the status code, and turn the response into a table.",
-    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week06_web-apis/week06_openalex_practice.ipynb"
+    "practice": "Lab 6 — Use an API key, request records, make a table, and download one paper's full text.",
+    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab06_openalex_api_acquisition.ipynb"
   },
   {
     "id": "explore-a-new-dataset",
