@@ -112,8 +112,6 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
   <p class="small">Click a name to put it in your code.</p>
   <h3><button type="button" class="name" data-name="data">data</button></h3>
   <p class="small">The saved response, as Python data.</p>
-  <h3><button type="button" class="name" data-name="data2">data2</button></h3>
-  <p class="small">The saved response for the next page.</p>
 </details>
 <details id="outlineBox"><summary>Outline of <code>data</code></summary>
   <div class="outline" id="outline"><p class="small">Loading…</p></div>
@@ -151,12 +149,13 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 </div>
 </main>
 
-<footer><div class="wrap">COMPSS 211A · UC Berkeley · CC BY 4.0. Python runs in your browser with Pyodide. Your code is saved in this browser only and is not sent anywhere. <code>data</code> and <code>data2</code> are two responses from the <a href="https://openalex.org">OpenAlex</a> API, saved on October 7, 2026 and shortened. <a href="data/week06/openalex_pages_provenance.json">How the copies were made</a>.</div></footer>
+<footer><div class="wrap">COMPSS 211A · UC Berkeley · CC BY 4.0. Python runs in your browser with Pyodide. Your code is saved in this browser only and is not sent anywhere. <code>data</code> is a response from the <a href="https://openalex.org">OpenAlex</a> API, saved on October 7, 2026 and shortened. <a href="data/week06/openalex_pages_provenance.json">How the copies were made</a>.</div></footer>
 
 <script src="sandbox/sandbox.js"></script>
 <script>
 'use strict';
 // The saved responses. Each file sits in data/week06/ next to this page and is read by the Python code as a file.
+// The second page is only used by the simulated OpenAlex.
 const DATA_FILES = ['openalex_page1.json', 'openalex_page2.json', 'openalex_institution.json'];
 const FILES = {};
 const ROOT = '/home/you/week06';
@@ -171,8 +170,6 @@ const SETUP = [
   'pd.set_option("display.max_colwidth", 60)',
   'with open("openalex_page1.json") as f:',
   '    data = json.load(f)',
-  'with open("openalex_page2.json") as f:',
-  '    data2 = json.load(f)',
 ].join('\n');
 // Steps that send a real request also get requests. pyodide_http lets requests work inside a browser.
 const LIVE_SETUP = 'import pyodide_http\npyodide_http.patch_all()\nimport requests';
@@ -182,7 +179,7 @@ const LIVE_SETUP = 'import pyodide_http\npyodide_http.patch_all()\nimport reques
 // answer: the model code. check.exprs: expressions compared after the student's code and after the model code.
 // live: the step sends a request; where it goes follows the “Requests go to” switch.
 // check.labels: what to call an expression in a message. check.truths: for a live request, tests on the student's own result, because a second request would give a different response.
-// pre: code run before the student's code, for a value an earlier step made. live: the step sends a real request.
+// pre: code run before the student's code, for a value an earlier step made.
 // example: code that is shown and can be run. after: shown once the answer is correct.
 // stage: where the step sits in Basics, Request, Response, Read values, Every work, Table. intro and after can be a list of paragraphs.
 const STEPS = [
@@ -268,42 +265,25 @@ const STEPS = [
    answer: 'top_keys = list(data.keys())\ntop_keys',
    check: {exprs: ['list(top_keys)']},
    hint: 'The blank is the name of the dictionary: <code>data</code>.',
-   after: '<code>meta</code> describes the whole result, <code>results</code> holds the works, and <code>group_by</code> is empty for this request. “Outline of data” in the side panel shows every level.'},
-  {topic: 'Read a value', stage: 'values',
-   intro: 'Square brackets with a key give the value stored under that key. <code>data["meta"]</code> is a dictionary too, so you can use brackets on it again.',
-   example: 'data["meta"]',
-   task: 'Make <code>n_matching</code>: how many works matched the request. It is stored under <code>count</code>, inside <code>meta</code>.',
-   starter: 'n_matching = data["____"]["____"]\nn_matching',
-   answer: 'n_matching = data["meta"]["count"]\nn_matching',
-   check: {exprs: ['n_matching']},
-   hint: 'The first key is <code>meta</code> and the second is <code>count</code>.',
-   after: '11,231 works from 2024 have a Berkeley author and an abstract.'},
+   after: '<code>meta</code> describes the whole result: <code>data["meta"]["count"]</code> is 11,231, the number of works that matched. <code>results</code> holds the works, and <code>group_by</code> is empty for this request. “Outline of data” in the side panel shows every level.'},
   {topic: 'Look inside a list', stage: 'values',
-   intro: '<code>data["results"]</code> is a list with one dictionary for each work. <code>len()</code> counts the items in a list. A list takes a position in the brackets, not a key: <code>[0]</code> is the first item.',
-   example: 'print(type(data["results"]))\nprint(type(data["results"][0]))',
-   task: 'Make <code>n_on_page</code>: how many works are in <code>data["results"]</code>. Then make <code>first_title</code>: the <code>display_name</code> of the first work.',
-   starter: 'n_on_page = ____(data["results"])\nfirst_title = data["results"][____]["display_name"]\nprint(n_on_page)\nprint(first_title)',
-   answer: 'n_on_page = len(data["results"])\nfirst_title = data["results"][0]["display_name"]\nprint(n_on_page)\nprint(first_title)',
-   check: {exprs: ['n_on_page', 'first_title']},
-   hint: '<code>len(...)</code> counts the works. The first work is at position <code>0</code>.',
-   after: 'Five works, because the request said <code>per_page</code> 5: the five most-cited of the 11,231.'},
+   intro: '<code>data["results"]</code> is a list with one dictionary for each work. A list takes a position in the brackets, not a key: <code>[0]</code> is the first item, <code>[1]</code> the second. <code>len()</code> counts the items.',
+   example: 'print(len(data["results"]))\nprint(data["results"][1]["display_name"])',
+   task: 'Run the example. It counts the works and prints the title of the second one. Then fill in the blank to get the title of the <b>first</b> work.',
+   starter: 'first_title = data["results"][____]["display_name"]\nfirst_title',
+   answer: 'first_title = data["results"][0]["display_name"]\nfirst_title',
+   check: {exprs: ['first_title']},
+   hint: 'The first work is at position <code>0</code>.',
+   after: 'There are five works because the request said <code>per_page</code> 5. They are the five most-cited of the 11,231.'},
   {topic: 'Go deeper, one level at a time', stage: 'values',
-   intro: 'The name of an author sits several levels down. Go one level at a time and look at what you have: a dictionary takes a key, a list takes a position. An authorship says who an author is and where they work.',
-   example: 'work = data["results"][0]\nprint(list(work.keys()))\nauthorships = work["authorships"]\nprint(type(authorships), len(authorships))\nauthorships[0]',
-   task: 'Make <code>first_author</code>: the name of the first author of the first work.',
+   intro: 'The name of an author sits several levels down. Go one level at a time: a dictionary takes a key, a list takes a position. <code>authorships</code> is a list with one item for each author of a work.',
+   example: 'work = data["results"][0]\nwork["authorships"][0]',
+   task: 'Run the example. It shows the first authorship of the first work. Then fill in the two blanks. Each one is a key: the first holds the list of authorships, and the second, inside one authorship, holds the person.',
    starter: 'work = data["results"][0]\nauthorship = work["____"][0]\nfirst_author = authorship["____"]["display_name"]\nfirst_author',
    answer: 'work = data["results"][0]\nauthorship = work["authorships"][0]\nfirst_author = authorship["author"]["display_name"]\nfirst_author',
    check: {exprs: ['first_author']},
-   hint: 'The first blank is <code>authorships</code>, the key that holds the list. The second is <code>author</code>, the key inside one authorship that holds the person.',
+   hint: 'The first blank is <code>authorships</code>. The second is <code>author</code>.',
    after: 'The same path on one line: <code>data["results"][0]["authorships"][0]["author"]["display_name"]</code>. From left to right: the first work, its first authorship, the author, the name.'},
-  {topic: 'Write it yourself: one value', stage: 'values',
-   intro: 'This time the box is empty and you write all of the code. “Outline of data” in the side panel shows where <code>primary_topic</code> sits. The hint has a starting point with blanks.',
-   task: 'Make <code>topic</code>: the <code>display_name</code> of the <code>primary_topic</code> of the <b>second</b> work.',
-   starter: '',
-   scaffold: 'work = data["results"][____]\ntopic = work["____"]["____"]\ntopic',
-   answer: 'work = data["results"][1]\ntopic = work["primary_topic"]["display_name"]\ntopic',
-   check: {exprs: ['topic']},
-   hint: 'The second work is at position <code>1</code>. From there, follow two keys: <code>primary_topic</code>, then <code>display_name</code>.'},
   {topic: 'Loop over the works', stage: 'all',
    intro: 'To get the same value from every work, loop over the list. Each time around, <code>work</code> is the dictionary for one work.',
    example: 'for work in data["results"]:\n    print(work["publication_year"], work["cited_by_count"])',
@@ -321,32 +301,21 @@ const STEPS = [
    check: {exprs: ['n_authors', 'n_no_orcid']},
    hint: 'The first blank is <code>len</code>, which counts the authors. The second is <code>is</code>.',
    after: 'Two of the seven authors have no ORCID. Missing data can also be an empty list: three of these authors have <code>[]</code> as their <code>institutions</code>.'},
-  {topic: 'Get the next page', stage: 'all',
-   intro: 'The response holds five works out of 11,231. To get the next five, you send the same request with the <code>next_cursor</code> value from <code>meta</code> as the <code>cursor</code>. <code>data2</code> is the saved response to that second request. <code>+</code> joins two lists into one.',
-   task: 'Make <code>cursor</code>: the <code>next_cursor</code> value in <code>data</code>. Then make <code>all_works</code>: the works of both pages in one list.',
-   starter: 'cursor = data["meta"]["____"]\nall_works = data["results"] + data2["____"]\nprint(cursor)\nprint(len(all_works))',
-   answer: 'cursor = data["meta"]["next_cursor"]\nall_works = data["results"] + data2["results"]\nprint(cursor)\nprint(len(all_works))',
-   check: {exprs: ['cursor', '[work["id"] for work in all_works]'], labels: {'[work["id"] for work in all_works]': 'all_works'}},
-   hint: 'The first blank is <code>next_cursor</code>. The works of the second page are under <code>results</code>, as in the first.',
-   after: 'Ten works. All 11,231 at five per page would take 2,247 requests.'},
   {topic: 'Write it yourself: make a table', stage: 'table',
-   pre: 'all_works = data["results"] + data2["results"]',
-   intro: '<code>pd.DataFrame</code> turns a list of dictionaries into a table: one dictionary for each row, one key for each column. <code>all_works</code> is loaded for this step: the ten works from both pages. The box is empty again, and the hint has a starting point with blanks.',
+   intro: '<code>pd.DataFrame</code> turns a list of dictionaries into a table: one dictionary for each row, one key for each column. This time the box is empty and you write all of the code. The hint has a starting point with blanks.',
    example: 'rows = [{"title": "A", "cited_by": 12}, {"title": "B", "cited_by": 7}]\npd.DataFrame(rows)',
-   task: 'Make <code>table</code>: a DataFrame with one row for each work in <code>all_works</code> and three columns: <code>title</code> (the work\'s <code>display_name</code>), <code>cited_by</code> (its <code>cited_by_count</code>) and <code>first_author</code> (the name of its first author).',
+   task: 'Make <code>table</code>: a DataFrame with one row for each work in <code>data["results"]</code> and three columns: <code>title</code> (the work\'s <code>display_name</code>), <code>cited_by</code> (its <code>cited_by_count</code>) and <code>first_author</code> (the name of its first author).',
    starter: '',
-   scaffold: 'rows = []\nfor work in all_works:\n    rows.append({\n        "title": work["____"],\n        "cited_by": work["____"],\n        "first_author": work["authorships"][____]["author"]["____"],\n    })\ntable = pd.DataFrame(rows)\ntable',
-   answer: 'rows = []\nfor work in all_works:\n    rows.append({\n        "title": work["display_name"],\n        "cited_by": work["cited_by_count"],\n        "first_author": work["authorships"][0]["author"]["display_name"],\n    })\ntable = pd.DataFrame(rows)\ntable',
+   scaffold: 'rows = []\nfor work in data["results"]:\n    rows.append({\n        "title": work["____"],\n        "cited_by": work["____"],\n        "first_author": work["authorships"][____]["author"]["____"],\n    })\ntable = pd.DataFrame(rows)\ntable',
+   answer: 'rows = []\nfor work in data["results"]:\n    rows.append({\n        "title": work["display_name"],\n        "cited_by": work["cited_by_count"],\n        "first_author": work["authorships"][0]["author"]["display_name"],\n    })\ntable = pd.DataFrame(rows)\ntable',
    check: {exprs: ['table'], ordered: true, names: true},
    hint: 'Start with an empty list. In a loop, append one dictionary for each work, with the keys <code>title</code>, <code>cited_by</code> and <code>first_author</code>. Then pass the list to <code>pd.DataFrame</code>. The path to an author\'s name is in the “Go deeper” step.',
-   after: 'The table answers the question: the ten most-cited 2024 works with a Berkeley author, and the first author of each.'},
-  {topic: 'Now work in the notebook', stage: 'table', handoff: true,
-   intro: 'For the rest of the class, work in the Week 6 notebook in VS Code: send a request of your own, save the response to a file and turn it into a table.'}
+   after: 'The table answers the question: the five most-cited 2024 works with a Berkeley author, and the first author of each.'}
 ];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const STORE = 'compss211a-week06-api-workspace-2';
+const STORE = 'compss211a-week06-api-workspace-3';
 let current = 0;
 const solved = new Set();
 // tried: steps where a checked answer was wrong. An answer can be opened once the student has tried.
@@ -701,9 +670,7 @@ function renderSteps() {
   $('steps').innerHTML = STEPS.map((s, i) => {
     const example = s.example ? `<div class="example"><div class="label">Example</div><pre>${esc(s.example)}</pre></div>
       <p><button data-act="example" data-q="${i}" disabled>Run the example</button></p><pre class="out" id="s${i}-example"></pre>` : '';
-    const work = s.handoff ? `<p>Open <code>lab06_openalex_api_acquisition.ipynb</code>, in the <code>lab</code> folder of the course repo.</p>
-        <p><a class="button" href="https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab06_openalex_api_acquisition.ipynb" target="_blank" rel="noopener">Open Lab 6 on GitHub</a></p>`
-      : `<h4>Your turn</h4><p class="task">${s.task}</p>
+    const work = `<h4>Your turn</h4><p class="task">${s.task}</p>
       <label class="small" for="s${i}-code">Your code</label>
       <textarea id="s${i}-code" spellcheck="false" autocomplete="off" rows="${Math.max(6, (s.scaffold || s.starter).split('\n').length + 1)}">${esc(s.starter)}</textarea>
       <div class="actions">
@@ -736,13 +703,6 @@ function restore() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
     if (!saved || !Array.isArray(saved.code)) return;
-    // State saved before the step at ADDED was put in: make room for it, and move the later steps up by one.
-    const ADDED = 3;
-    if (saved.code.length === STEPS.length - 1) {
-      saved.code.splice(ADDED, 0, null);
-      for (const name of ['solved', 'tried']) saved[name] = (saved[name] || []).map(i => i >= ADDED ? i + 1 : i);
-      if (Number.isInteger(saved.current) && saved.current >= ADDED) saved.current += 1;
-    }
     if (saved.code.length !== STEPS.length) return;
     saved.code.forEach((text, i) => { if (typeof text === 'string' && STEPS[i].answer) $(`s${i}-code`).value = text; });
     for (const [name, set] of [['solved', solved], ['tried', tried]])
