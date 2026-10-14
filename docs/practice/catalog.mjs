@@ -419,7 +419,7 @@ export const skills = [
     "releaseWeek": 7,
     "activity": null,
     "practice": "Agentic-code guide — Explain a generated function and check its behavior on a tiny example.",
-    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week07_agentic-coding/agentic_code_verification_guide.md"
+    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week07_language-model-apis/agentic_code_verification_guide.md"
   },
   {
     "id": "modify-existing-code",

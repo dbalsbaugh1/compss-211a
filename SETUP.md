@@ -127,7 +127,7 @@ If you already edited an original notebook:
 ## API keys
 
 Some weeks call an online service that needs an API key (a password for
-programs). Gemini, used from Week 10 and in HW5, is one of them. Keep keys in a
+programs). Gemini, used from Week 7 and in HW5, is one of them. Keep keys in a
 file named `.env` in the top folder of the repository. Git ignores this file,
 so your keys never end up on GitHub.
 
