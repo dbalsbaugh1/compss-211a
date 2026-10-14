@@ -550,7 +550,7 @@ print((predicted == actual).mean())
   E("generate-content", "client.models.generate_content(model=..., contents=prompt)", "Send a prompt to Gemini and get its reply. The text is in response.text.", 10, "use-an-llm-from-python", '''
 from google import genai
 client = genai.Client(api_key=api_key)
-response = client.models.generate_content(model="gemini-3.6-flash", contents="Say hello in five words.")
+response = client.models.generate_content(model="gemini-3.5-flash-lite", contents="Say hello in five words.")
 print(response.text)
 ''', run=False, note="This needs your Gemini key, so it is not run here."),
  ]),

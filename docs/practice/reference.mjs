@@ -1509,7 +1509,7 @@ export const referenceGroups=[
     "week": 10,
     "skill": "use-an-llm-from-python",
     "setup": "none",
-    "example": "from google import genai\nclient = genai.Client(api_key=api_key)\nresponse = client.models.generate_content(model=\"gemini-3.6-flash\", contents=\"Say hello in five words.\")\nprint(response.text)",
+    "example": "from google import genai\nclient = genai.Client(api_key=api_key)\nresponse = client.models.generate_content(model=\"gemini-3.5-flash-lite\", contents=\"Say hello in five words.\")\nprint(response.text)",
     "run": false,
     "note": "This needs your Gemini key, so it is not run here.",
     "packages": [],

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calling a language model · COMPSS 211A</title>
+<meta name="description" content="Label six comments with a codebook, see what one call to Gemini sends and gets back, and compare the model's labels with yours. Nothing is sent, and no key is needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inter+Tight:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --berkeley:#002676; --ink:#1A1A1A; --paper:#FFFFFF; --card:#FFFFFF;
+  --gold:#FDBA12; --gold-soft:#FFF1CC; --blue-mid:#2A4D9B; --line:#DDDDDD;
+  --ok:#1E7D4E; --err:#B3403A; --code-bg:#0E1B45; --code-ink:#E8EDF6;
+  --serif:"Inter Tight","Inter",-apple-system,"Segoe UI",sans-serif;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:clip}
+body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.6;font-size:16.5px}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mast{background:var(--berkeley);margin:0 calc(50% - 50vw);padding:12px calc(50vw - 50%);display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.14)}
+.mast .brand{color:#fff;font-size:.9rem;font-weight:600}
+.mast .brand .uc{font-family:Georgia,"Times New Roman",serif;color:var(--gold);font-size:1.04rem;font-weight:700;margin-right:7px}
+.mast a{color:#fff;font-weight:600;font-size:.83rem;text-decoration:none;border-bottom:1.5px solid rgba(255,255,255,.35)}
+.mast a:hover{border-bottom-color:var(--gold)}
+header{background:var(--berkeley);margin:0 calc(50% - 50vw) 40px;padding:30px calc(50vw - 50%) 28px;border-bottom:5px solid var(--gold)}
+h1{font-family:var(--serif);font-weight:800;color:#fff;font-size:clamp(2rem,5vw,2.9rem);line-height:1.12;margin:0 0 .7rem;letter-spacing:-.015em}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin:.4rem 0 1rem}
+.chip{display:inline-flex;align-items:center;font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:3px}
+.chip-gold{background:var(--gold);color:var(--berkeley)}
+.chip-line{border:1.5px solid rgba(255,255,255,.55);color:#fff}
+.lede{max-width:700px;color:rgba(255,255,255,.9)}
+h2{font-family:var(--serif);font-weight:600;color:var(--berkeley);font-size:1.5rem;margin:0 0 .35rem}
+h2 .step{margin-right:.35rem}
+h3{font-family:var(--serif);font-size:1.08rem;color:var(--berkeley);margin:0 0 8px}
+.section-note{color:#3A4A63;font-size:.95rem;margin-bottom:1rem;max-width:700px}
+.section-note + .section-note{margin-top:-.4rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px 24px;box-shadow:0 1px 2px rgba(18,35,61,.05);margin-bottom:34px}
+code.inl{font-family:var(--mono);font-size:.8em;background:#ECEFF5;border-radius:4px;padding:1px 6px;overflow-wrap:anywhere}
+a{color:var(--blue-mid)}
+a:focus-visible,button:focus-visible,input:focus-visible+span{outline:2.5px solid var(--gold);outline-offset:2px}
+/* notice about where the responses come from */
+.notice{border:1px dashed #D9A73E;background:var(--gold-soft);border-radius:4px;padding:12px 16px;margin:0 0 30px;font-size:.92rem;color:#4A4020}
+/* codebook */
+.codebook{border-left:4px solid var(--gold);background:#FAFAFA;padding:12px 16px;margin:0 0 18px;font-size:.93rem}
+.codebook dt{font-family:var(--mono);font-size:.82rem;color:var(--berkeley);font-weight:500}
+.codebook dd{margin:0 0 8px}
+.codebook dd:last-child{margin-bottom:0}
+.codebook mark{background:var(--gold-soft);padding:0 2px}
+/* comment rows for hand labels */
+fieldset.item{border:0;border-top:1px solid var(--line);padding:14px 0 12px}
+fieldset.item:first-of-type{border-top:0;padding-top:0}
+fieldset.item legend{font-size:.95rem;padding:0;margin-bottom:8px;float:left;width:100%}
+fieldset.item legend b{font-family:var(--mono);font-size:.8rem;color:var(--blue-mid);margin-right:6px}
+.pills{display:flex;flex-wrap:wrap;gap:8px;clear:both}
+.pill{position:relative}
+.pill input{position:absolute;opacity:0;width:1px;height:1px}
+.pill span{display:inline-block;font-family:var(--mono);font-size:.78rem;border:1.5px solid var(--line);border-radius:4px;padding:5px 11px;cursor:pointer;background:#fff}
+.pill input:checked+span{border-color:var(--berkeley);background:#EEF3F9;color:var(--berkeley);font-weight:500}
+.pill input:disabled+span{cursor:default}
+/* buttons */
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+button.btn{font-family:var(--sans);font-weight:600;font-size:.9rem;color:#fff;background:var(--berkeley);border:none;border-radius:4px;padding:9px 18px;cursor:pointer}
+button.btn:hover{box-shadow:0 6px 16px rgba(0,38,118,.22)}
+button.btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+button.btn-ghost{background:#fff;color:var(--berkeley);border:1.5px solid var(--berkeley)}
+.msg{font-size:.9rem;color:#3A4A63}
+.msg.bad{color:var(--err)}
+/* code and request/response panels */
+pre.code{background:var(--code-bg);color:var(--code-ink);border-radius:4px;padding:14px 16px;font-family:var(--mono);font-size:.78rem;line-height:1.7;overflow-x:auto;white-space:pre;margin:0 0 16px}
+pre.code .c{color:#7C8CA5}
+pre.code .s{color:#A8C7EE}
+pre.code .k{color:#F5C860}
+pre.code .n{color:#8FD8B0}
+.parts{display:grid;gap:12px;margin-bottom:16px}
+.part{border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.part .label{background:#EEF3F9;color:var(--berkeley);font-weight:600;font-size:.82rem;padding:6px 12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.part .label span{font-weight:400;color:#51607A}
+.part pre{margin:0;padding:10px 12px;font-family:var(--mono);font-size:.78rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;background:#FBFCFE}
+.simtag{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#0E1B2C;background:var(--gold);border-radius:3px;padding:2px 10px}
+.response{margin-top:16px}
+.response[hidden]{display:none}
+/* prediction cards */
+.qcard{border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin:0 0 16px;background:#FAFAFA}
+.qcard .opts{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
+.qcard label{display:flex;gap:10px;align-items:flex-start;font-size:.93rem;cursor:pointer}
+.qcard input[type=radio]{margin-top:5px;accent-color:var(--berkeley)}
+.verdict{border-radius:4px;padding:10px 14px;font-size:.92rem;margin-top:10px;display:none}
+.verdict.show{display:block}
+.verdict.good{background:#E8F4EC;color:var(--ok);border:1px solid #BFE0CB}
+.verdict.bad{background:#F9E9E7;color:var(--err);border:1px solid #EAC7C3}
+/* comparison list */
+.compare{list-style:none;margin:0}
+.compare li{border-top:1px solid var(--line);padding:12px 0}
+.compare li:first-child{border-top:0;padding-top:0}
+.compare .text{font-size:.93rem;margin-bottom:6px}
+.compare .text b{font-family:var(--mono);font-size:.8rem;color:var(--blue-mid);margin-right:6px}
+.compare .row{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;align-items:baseline}
+.compare .who{color:#51607A}
+.compare .lab{font-family:var(--mono);font-size:.78rem}
+.compare .why{font-size:.85rem;color:#51607A;margin-top:4px}
+.compare .flag{font-weight:600}
+.compare .flag.same{color:var(--ok)}
+.compare .flag.diff{color:var(--err)}
+.compare li.flipped{background:var(--gold-soft);margin:0 -10px;padding-left:10px;padding-right:10px}
+.tally{font-weight:600;color:var(--berkeley);margin:0 0 14px}
+.switch{display:inline-flex;margin-bottom:14px}
+.switch button{font-family:var(--sans);font-size:.86rem;padding:6px 14px;border:1.5px solid var(--berkeley);background:#fff;color:var(--berkeley);cursor:pointer}
+.switch button:first-child{border-radius:4px 0 0 4px}
+.switch button+button{border-left:0;border-radius:0 4px 4px 0}
+.switch button[aria-pressed=true]{background:var(--berkeley);color:#fff;font-weight:600}
+.runs{list-style:none;margin:10px 0 0;font-size:.88rem}
+.runs li{padding:6px 0;border-top:1px solid var(--line)}
+.runs li:first-child{border-top:0}
+.runs .lab{font-family:var(--mono);font-size:.78rem;font-weight:500}
+.recap{background:linear-gradient(0deg,rgba(0,38,118,.045),rgba(0,38,118,.045)),var(--card)}
+.recap ul{margin:8px 0 0 20px}
+.recap li{margin-bottom:7px;font-size:.95rem}
+.recap li::marker{color:var(--gold)}
+footer{background:var(--berkeley);color:rgba(255,255,255,.85);margin:44px calc(50% - 50vw) 0;padding:20px calc(50vw - 50%) 26px;font-size:.85rem}
+footer a{color:#fff}
+@media (max-width:600px){.card{padding:18px 16px}.wrap{padding:0 16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="mast"><span class="brand"><span class="uc">UC Berkeley</span>COMPSS 211A · Computing I</span><a href="../index.html">← All interactives</a></div>
+
+<header>
+  <h1>Calling a language model</h1>
+  <div class="chips">
+    <span class="chip chip-gold">Week 7 · Language model APIs</span>
+    <span class="chip chip-line">About 10 minutes</span>
+    <span class="chip chip-line">Simulated: nothing is sent, no key needed</span>
+  </div>
+  <p class="lede">
+    Researchers often label texts by hand: they read each one and give it a category from a
+    codebook. This is also called coding or annotation. A language model can do the same through
+    an API. Here you label six comments yourself, see what one call to Gemini sends and gets back,
+    and compare its labels with yours.
+  </p>
+</header>
+
+<div class="notice" id="notice" hidden></div>
+<p class="msg bad" id="loadError" hidden>The saved responses could not be loaded. Reload the page.</p>
+
+<!-- 1 · hand labels -->
+<section aria-labelledby="s1">
+  <h2 id="s1"><span class="step">1·</span>Label the comments yourself</h2>
+  <p class="section-note"><b>The post:</b> <span id="post"></span></p>
+  <p class="section-note">
+    A codebook lists the labels and says what each one means. Read it, then give each comment one
+    label. Label them before you see the model's labels, so that its answers don't change yours.
+  </p>
+  <div class="card">
+    <dl class="codebook" id="codebook1"></dl>
+    <form id="handForm"></form>
+    <div class="actions">
+      <button class="btn" id="saveLabels" type="button">Save my labels</button>
+      <span class="msg" id="saveMsg" aria-live="polite"></span>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · one call -->
+<section aria-labelledby="s2">
+  <h2 id="s2"><span class="step">2·</span>What one call sends and gets back</h2>
+  <p class="section-note">
+    In Python, you call Gemini with <code class="inl">client.models.generate_content(...)</code>.
+    The call sends the name of the model, a <b>system instruction</b> with the task and the codebook, a
+    <b>prompt</b> with one comment, and settings. Here the settings are a <b>schema</b>, which lists
+    the fields the answer must have and the labels it may use, and the <b>temperature</b>.
+  </p>
+  <div class="card">
+    <pre class="code" id="callCode"></pre>
+    <div class="parts" id="requestParts"></div>
+
+    <div class="qcard">
+      <h3>Before you send: predict</h3>
+      <p style="font-size:.93rem">What will <code class="inl">response.text</code> be?</p>
+      <div class="opts" role="radiogroup" aria-label="What response.text will be">
+        <label><input type="radio" name="p1" value="dict"> A Python dictionary with the keys <code class="inl">label</code> and <code class="inl">reason</code></label>
+        <label><input type="radio" name="p1" value="str"> A string: text that is written as JSON</label>
+      </div>
+      <button class="btn" type="button" id="checkP1">Check</button>
+      <div class="verdict" id="v-p1" aria-live="polite"></div>
+    </div>
+
+    <button class="btn" type="button" id="sendOne">Send the call</button>
+    <div class="response" id="responseOne" hidden aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 3 · all six -->
+<section aria-labelledby="s3">
+  <h2 id="s3"><span class="step">3·</span>Label all six and compare</h2>
+  <p class="section-note">
+    A loop sends the same system instruction with each comment in turn. Then you put the model's
+    labels next to yours.
+  </p>
+  <div class="card">
+    <div class="actions" style="margin-top:0;margin-bottom:14px">
+      <button class="btn" type="button" id="sendAll">Send all six</button>
+      <span class="msg" id="sendAllMsg" aria-live="polite"></span>
+    </div>
+    <div id="compareOut" aria-live="polite"></div>
+
+    <div class="qcard" id="q2" hidden>
+      <h3>Look at C3</h3>
+      <p style="font-size:.93rem">C3 says the poster should have asked, and that the roommate should not have yelled. Which label does the codebook give a comment like that?</p>
+      <div class="opts" role="radiogroup" aria-label="Which label the codebook gives C3">
+        <label><input type="radio" name="p2" value="a"> <span><code class="inl">poster_at_fault</code></span></label>
+        <label><input type="radio" name="p2" value="b"> <span><code class="inl">poster_not_at_fault</code></span></label>
+        <label><input type="radio" name="p2" value="c"> <span><code class="inl">unclear</code></span></label>
+        <label><input type="radio" name="p2" value="d"> The codebook does not say</label>
+      </div>
+      <button class="btn" type="button" id="checkP2">Check</button>
+      <div class="verdict" id="v-p2" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · change one definition -->
+<section aria-labelledby="s4">
+  <h2 id="s4"><span class="step">4·</span>Change one definition</h2>
+  <p class="section-note">
+    Version 2 of the codebook changes one definition: a comment that blames both people is now
+    <code class="inl">unclear</code>. Nothing else changes. Switch between the versions and see
+    which labels change.
+  </p>
+  <div class="card">
+    <div class="switch" role="group" aria-label="Codebook version">
+      <button type="button" data-version="v1" aria-pressed="true">Version 1</button>
+      <button type="button" data-version="v2" aria-pressed="false">Version 2</button>
+    </div>
+    <dl class="codebook" id="codebook2"></dl>
+    <div id="versionOut" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 5 · ask again -->
+<section aria-labelledby="s5">
+  <h2 id="s5"><span class="step">5·</span>Ask the same question again</h2>
+  <p class="section-note">
+    A language model picks each word with some chance. The <b>temperature</b> sets how much chance.
+    Send the same call for C3 three times with the default temperature, and three times with the
+    temperature set to 0.
+  </p>
+  <div class="card">
+    <div class="actions" style="margin-top:0">
+      <button class="btn" type="button" data-repeat="default">Send 3 times, default temperature</button>
+      <button class="btn btn-ghost" type="button" data-repeat="zero">Send 3 times, temperature 0</button>
+    </div>
+    <div id="repeatOut" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- recap -->
+<section aria-labelledby="s6">
+  <h2 id="s6"><span class="step">✓</span>Remember</h2>
+  <div class="card recap">
+    <ul>
+      <li>A codebook names the labels and defines each one. The model only knows what the system instruction tells it.</li>
+      <li>One call sends the model name, a system instruction, a prompt and settings. The answer comes back as text. With a schema, that text is JSON, and <code class="inl">json.loads</code> turns it into a dictionary.</li>
+      <li>The response also says how many tokens went in and came out. Services charge by the token.</li>
+      <li>Label a sample yourself before you trust the model. Read every disagreement: one of you misread the comment, or the definition does not cover it.</li>
+      <li>A change to one definition can change the labels. So can sending the same call again. Save the model name, the codebook version, the temperature and the date with every set of labels.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>COMPSS 211A · UC Berkeley · CC BY 4.0 · Nothing on this page is sent to Gemini, and nothing you choose is saved. The responses come from <a href="data/week07/gemini_responses.json">a saved file</a>. On Monday you send these calls yourself, with your own key.</footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+let D = null;
+const mine = {};          // my labels, by comment id
+let saved = false;
+
+function codebookHTML(version, mark) {
+  return Object.entries(D.definitions[version]).map(([label, text]) => {
+    const body = mark && label === "unclear" ? esc(text).replace(/(, or it says both people were in the wrong)/, "<mark>$1</mark>") : esc(text);
+    return `<dt>${esc(label)}</dt><dd>${body}</dd>`;
+  }).join("");
+}
+const parse = reply => JSON.parse(reply.text);
+// How Python prints a dictionary of strings: single quotes, unless the text holds one.
+const pyStr = t => t.includes("'") && !t.includes('"') ? `"${t}"` : `'${t.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+const pyDict = obj => "{" + Object.entries(obj).map(([k, v]) => `${pyStr(k)}: ${pyStr(String(v))}`).join(", ") + "}";
+const byComment = list => Object.fromEntries(list.map(r => [r.comment, r]));
+const textOf = id => D.comments.find(c => c.id === id).text;
+
+/* 1 · hand labels */
+function renderHand() {
+  $("post").textContent = D.post;
+  $("codebook1").innerHTML = codebookHTML("v1");
+  $("handForm").innerHTML = D.comments.map(c => `
+    <fieldset class="item">
+      <legend><b>${c.id}</b>${esc(c.text)}</legend>
+      <div class="pills">${D.labels.map(l => `<label class="pill"><input type="radio" name="hand-${c.id}" value="${l}"><span>${l}</span></label>`).join("")}</div>
+    </fieldset>`).join("");
+}
+$("saveLabels").addEventListener("click", () => {
+  const missing = [];
+  for (const c of D.comments) {
+    const pick = document.querySelector(`input[name="hand-${c.id}"]:checked`);
+    if (pick) mine[c.id] = pick.value; else missing.push(c.id);
+  }
+  if (missing.length) {
+    $("saveMsg").className = "msg bad";
+    $("saveMsg").textContent = `Give every comment a label first. Still missing: ${missing.join(", ")}.`;
+    return;
+  }
+  saved = true;
+  document.querySelectorAll("#handForm input").forEach(i => { i.disabled = true; });
+  $("saveLabels").disabled = true;
+  $("saveMsg").className = "msg";
+  $("saveMsg").textContent = "Saved. You compare them with the model's labels in step 3.";
+  $("sendAllMsg").textContent = "";
+});
+
+/* 2 · one call */
+function renderCall() {
+  const first = D.comments[0];
+  $("callCode").innerHTML =
+`<span class="k">prompt</span> = TEMPLATE.format(text=comments[<span class="n">0</span>])
+response = client.models.generate_content(
+    model=<span class="s">"${esc(D.model)}"</span>,
+    contents=<span class="k">prompt</span>,
+    config=types.GenerateContentConfig(
+        system_instruction=SYSTEM,
+        response_mime_type=<span class="s">"application/json"</span>,
+        response_schema=LABEL_SCHEMA,
+        temperature=<span class="n">0</span>,
+    ),
+)`;
+  const schema = `label: one of ${D.schema.properties.label.enum.join(", ")}\nreason: text\nboth are required`;
+  $("requestParts").innerHTML = [
+    ["Model", "which language model answers", D.model],
+    ["System instruction", "the same for every comment", D.system.v1],
+    ["Prompt", "the template, filled in with comment C1", D.template.replace("{text}", first.text)],
+    ["Schema", "the shape the answer must have", schema],
+    ["Temperature", "0: as little chance as possible", "0"],
+  ].map(([name, what, body]) => `<div class="part"><div class="label">${name} <span>${what}</span></div><pre>${esc(body)}</pre></div>`).join("");
+}
+$("checkP1").addEventListener("click", () => {
+  const pick = document.querySelector("input[name=p1]:checked"), v = $("v-p1");
+  if (!pick) { v.className = "verdict show bad"; v.textContent = "Pick an answer first."; return; }
+  const good = pick.value === "str";
+  v.className = "verdict show " + (good ? "good" : "bad");
+  v.textContent = good
+    ? "Right. The answer always comes back as text. The schema makes that text valid JSON, and json.loads turns it into a dictionary."
+    : "Not quite. The answer always comes back as text, even with a schema. The schema only makes the text valid JSON. You turn it into a dictionary with json.loads.";
+});
+$("sendOne").addEventListener("click", () => {
+  const reply = D.runs.v1[0], usage = reply.usage;
+  const usageText = Object.entries(usage).map(([k, n]) => `${k}: ${n}`).join("\n");
+  $("responseOne").innerHTML = `
+    <div class="parts">
+      <div class="part"><div class="label">response.text <span class="simtag">saved response</span></div><pre>${esc(reply.text)}</pre></div>
+      <div class="part"><div class="label">json.loads(response.text) <span>now a dictionary</span></div><pre>${esc(pyDict(parse(reply)))}</pre></div>
+      <div class="part"><div class="label">response.usage_metadata <span>tokens in and out</span></div><pre>${esc(usageText)}</pre></div>
+      <div class="part"><div class="label">finish reason <span>why the model stopped</span></div><pre>${esc(reply.finish_reason)}</pre></div>
+    </div>
+    <p class="section-note" style="margin:0">A <b>token</b> is a piece of a word. The prompt count includes the system instruction, which is sent again with every comment. The service charges by the token, so a long codebook costs more for every text you label. Some models also report <code class="inl">thoughts_token_count</code>: tokens spent reasoning before the answer, which are charged too. <code class="inl">STOP</code> means the model finished its answer. Another reason, such as running out of tokens, means the answer may be cut off.</p>`;
+  $("responseOne").hidden = false;
+});
+
+/* 3 · compare */
+function compareHTML(version, opts = {}) {
+  const runs = byComment(D.runs[version]), other = opts.against ? byComment(D.runs[opts.against]) : null;
+  let agree = 0;
+  const items = D.comments.map(c => {
+    const r = parse(runs[c.id]);
+    const same = mine[c.id] === r.label;
+    if (same) agree++;
+    const flipped = other && parse(other[c.id]).label !== r.label;
+    return `<li class="${flipped ? "flipped" : ""}">
+      <div class="text"><b>${c.id}</b>${esc(c.text)}</div>
+      <div class="row">
+        <span><span class="who">You:</span> <span class="lab">${esc(mine[c.id])}</span></span>
+        <span><span class="who">Gemini:</span> <span class="lab">${esc(r.label)}</span></span>
+        <span class="flag ${same ? "same" : "diff"}">${same ? "same" : "different"}</span>
+        ${flipped ? `<span class="flag">changed from version 1</span>` : ""}
+      </div>
+      <div class="why">Gemini's reason: ${esc(r.reason)}</div>
+    </li>`;
+  }).join("");
+  return `<p class="tally">You and Gemini give the same label to ${agree} of ${D.comments.length} comments.</p><ul class="compare">${items}</ul>`;
+}
+$("sendAll").addEventListener("click", () => {
+  if (!saved) { $("sendAllMsg").className = "msg bad"; $("sendAllMsg").textContent = "Save your own labels in step 1 first."; return; }
+  $("compareOut").innerHTML = compareHTML("v1") +
+    `<p class="section-note" style="margin:14px 0 0">Neither set of labels is the right answer. Where you differ, read the comment again. Either one of you misread it, or the codebook does not cover it.</p>`;
+  $("q2").hidden = false;
+  renderVersion("v1");
+});
+$("checkP2").addEventListener("click", () => {
+  const pick = document.querySelector("input[name=p2]:checked"), v = $("v-p2");
+  if (!pick) { v.className = "verdict show bad"; v.textContent = "Pick an answer first."; return; }
+  const good = pick.value === "d";
+  v.className = "verdict show " + (good ? "good" : "bad");
+  v.textContent = good
+    ? "Right. Version 1 has no rule for a comment that blames both people, so you and the model each had to guess. Step 4 adds that rule."
+    : "Read the definitions again. Each one assumes the comment blames one side. None says what to do when a comment blames both, so you and the model each had to guess. Step 4 adds that rule.";
+});
+
+/* 4 · versions */
+let version = "v1";
+function renderVersion(v) {
+  version = v;
+  document.querySelectorAll("[data-version]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.version === v)));
+  $("codebook2").innerHTML = codebookHTML(v, v === "v2");
+  if (!saved) { $("versionOut").innerHTML = `<p class="msg">Save your labels in step 1 to see the comparison here.</p>`; return; }
+  const changed = D.comments.filter(c => parse(byComment(D.runs.v1)[c.id]).label !== parse(byComment(D.runs.v2)[c.id]).label).map(c => c.id);
+  const note = changed.length
+    ? `The highlighted label changed because one definition changed. A set of labels depends on the codebook that made it, so write down which version you used.`
+    : `No label changed this time. Under version 1, Gemini already gave C3 <code class="inl">unclear</code>, so the new rule made no difference to its answer. Step 5 shows that its label for C3 can also change from one call to the next.`;
+  $("versionOut").innerHTML = compareHTML(v, v === "v2" ? {against: "v1"} : {}) +
+    (v === "v2" ? `<p class="section-note" style="margin:14px 0 0">${note}</p>` : "");
+}
+document.querySelectorAll("[data-version]").forEach(b => b.addEventListener("click", () => renderVersion(b.dataset.version)));
+
+/* 5 · repeat */
+document.querySelectorAll("[data-repeat]").forEach(b => b.addEventListener("click", () => {
+  const kind = b.dataset.repeat, rep = D.runs.repeat, runs = rep[kind];
+  const labels = runs.map(r => parse(r).label);
+  const distinct = new Set(labels).size;
+  $("repeatOut").innerHTML = `
+    <p class="section-note" style="margin:14px 0 6px"><b>${esc(rep.comment)}:</b> ${esc(textOf(rep.comment))}</p>
+    <ul class="runs">${runs.map((r, i) => `<li>Call ${i + 1}: <span class="lab">${esc(parse(r).label)}</span>. ${esc(parse(r).reason)}</li>`).join("")}</ul>
+    <p class="section-note" style="margin:12px 0 0">${distinct > 1
+      ? (kind === "default"
+          ? "The same call gave different labels. If you label a dataset once, a second run could give other counts."
+          : "Even with temperature 0, the label changed between calls. Temperature 0 makes answers more alike, but not identical. Save the model, the codebook version, the temperature and the date with your labels.")
+      : new Set(runs.map(r => parse(r).reason)).size > 1
+        ? "The label is the same three times. Read the reasons: the wording changes from call to call, so the answers are not identical."
+        : "All three calls gave the same answer this time. That does not promise the same answer on the next call. Try the other button."}</p>`;
+}));
+
+/* load */
+fetch("data/week07/gemini_responses.json")
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => {
+    D = data;
+    if (D.source !== "recorded") {
+      $("notice").innerHTML = `<b>Example responses.</b> ${esc(D.source_note)} The calls on Monday return real responses, which can differ.`;
+      $("notice").hidden = false;
+    }
+    renderHand();
+    renderCall();
+    renderVersion("v1");
+  })
+  .catch(() => { $("loadError").hidden = false; });
+</script>
+</body>
+</html>

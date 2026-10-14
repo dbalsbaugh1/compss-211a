@@ -1,0 +1,269 @@
+{
+ "source": "recorded",
+ "source_note": "Recorded from gemini-3.5-flash-lite on 2026-10-14 with the inputs in this file.",
+ "model": "gemini-3.5-flash-lite",
+ "recorded_on": "2026-10-14",
+ "post": "A person borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them about it.",
+ "labels": [
+  "poster_at_fault",
+  "poster_not_at_fault",
+  "unclear"
+ ],
+ "definitions": {
+  "v1": {
+   "poster_at_fault": "the comment says the poster was in the wrong.",
+   "poster_not_at_fault": "the comment says the poster was not in the wrong.",
+   "unclear": "the comment does not say who was in the wrong."
+  },
+  "v2": {
+   "poster_at_fault": "the comment says the poster was in the wrong.",
+   "poster_not_at_fault": "the comment says the poster was not in the wrong.",
+   "unclear": "the comment does not say who was in the wrong, or it says both people were in the wrong."
+  }
+ },
+ "system": {
+  "v1": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong.\n\nAlso give a reason of one short sentence.",
+  "v2": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong, or it says both people were in the wrong.\n\nAlso give a reason of one short sentence."
+ },
+ "template": "Label this comment.\n\nComment: {text}",
+ "schema": {
+  "type": "object",
+  "properties": {
+   "label": {
+    "type": "string",
+    "enum": [
+     "poster_at_fault",
+     "poster_not_at_fault",
+     "unclear"
+    ]
+   },
+   "reason": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "label",
+   "reason"
+  ]
+ },
+ "comments": [
+  {
+   "id": "C1",
+   "text": "You took a bike that isn't yours and brought it back broken. Pay for the repair."
+  },
+  {
+   "id": "C2",
+   "text": "It's a flat tire. Your roommate borrows your stuff all the time, so this is not a big deal."
+  },
+  {
+   "id": "C3",
+   "text": "You should have asked first, but yelling at you over a flat is too much."
+  },
+  {
+   "id": "C4",
+   "text": "Sure, borrowing without asking is fine, as long as it comes back in one piece. Oh wait."
+  },
+  {
+   "id": "C5",
+   "text": "Patch kits cost five dollars. Keep one in your bag."
+  },
+  {
+   "id": "C6",
+   "text": "Did you two agree to share things? If so, I don't see the problem."
+  }
+ ],
+ "runs": {
+  "v1": [
+   {
+    "comment": "C1",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter points out that taking someone else's property and returning it broken makes the poster responsible for the damage.\"\n}",
+    "usage": {
+     "candidates_token_count": 44,
+     "prompt_token_count": 138,
+     "total_token_count": 182
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C2",
+    "text": "{\n  \"label\": \"poster_not_at_fault\",\n  \"reason\": \"The commenter minimizes the issue by stating it is just a flat tire and the roommate does the same thing.\"\n}",
+    "usage": {
+     "candidates_token_count": 44,
+     "prompt_token_count": 142,
+     "total_token_count": 186
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C3",
+    "text": "{\n  \"label\": \"unclear\",\n  \"reason\": \"The comment assigns blame to both the poster and the roommate.\"\n}",
+    "usage": {
+     "candidates_token_count": 30,
+     "prompt_token_count": 135,
+     "total_token_count": 165
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C4",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The sarcastic comment highlights that returning the bike damaged makes the poster in the wrong.\"\n}",
+    "usage": {
+     "candidates_token_count": 37,
+     "prompt_token_count": 139,
+     "total_token_count": 176
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C5",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The comment implies the poster should have been prepared to fix the damage they caused.\"\n}",
+    "usage": {
+     "candidates_token_count": 37,
+     "prompt_token_count": 130,
+     "total_token_count": 167
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C6",
+    "text": "{\n  \"label\": \"unclear\",\n  \"reason\": \"The comment asks for clarification on an agreement before deciding who is at fault.\"\n}",
+    "usage": {
+     "candidates_token_count": 33,
+     "prompt_token_count": 137,
+     "total_token_count": 170
+    },
+    "finish_reason": "STOP"
+   }
+  ],
+  "v2": [
+   {
+    "comment": "C1",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter clearly states the poster is in the wrong for taking the bike and breaking it.\"\n}",
+    "usage": {
+     "candidates_token_count": 39,
+     "prompt_token_count": 148,
+     "total_token_count": 187
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C2",
+    "text": "{\n  \"label\": \"poster_not_at_fault\",\n  \"reason\": \"The commenter minimizes the issue by stating that a flat tire is not a big deal since the roommate also borrows things.\"\n}",
+    "usage": {
+     "candidates_token_count": 46,
+     "prompt_token_count": 152,
+     "total_token_count": 198
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C3",
+    "text": "{\n  \"label\": \"unclear\",\n  \"reason\": \"The comment indicates that both people were at fault for different reasons.\"\n}",
+    "usage": {
+     "candidates_token_count": 31,
+     "prompt_token_count": 145,
+     "total_token_count": 176
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C4",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The comment sarcastically implies that the poster was wrong to borrow the bike without asking and return it damaged.\"\n}",
+    "usage": {
+     "candidates_token_count": 43,
+     "prompt_token_count": 149,
+     "total_token_count": 192
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C5",
+    "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The comment implies the poster should have been prepared to fix the flat tire they caused.\"\n}",
+    "usage": {
+     "candidates_token_count": 38,
+     "prompt_token_count": 140,
+     "total_token_count": 178
+    },
+    "finish_reason": "STOP"
+   },
+   {
+    "comment": "C6",
+    "text": "{\n  \"label\": \"unclear\",\n  \"reason\": \"The comment asks a clarifying question about shared agreements instead of assigning direct blame.\"\n}",
+    "usage": {
+     "candidates_token_count": 33,
+     "prompt_token_count": 147,
+     "total_token_count": 180
+    },
+    "finish_reason": "STOP"
+   }
+  ],
+  "repeat": {
+   "comment": "C3",
+   "prompt_version": "v1",
+   "default": [
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter states that the poster should have asked before borrowing the bike.\"\n}",
+     "usage": {
+      "candidates_token_count": 35,
+      "prompt_token_count": 135,
+      "total_token_count": 170
+     },
+     "finish_reason": "STOP"
+    },
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter states that the poster should have asked before borrowing the bike.\"\n}",
+     "usage": {
+      "candidates_token_count": 35,
+      "prompt_token_count": 135,
+      "total_token_count": 170
+     },
+     "finish_reason": "STOP"
+    },
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter states that the poster should have asked before borrowing the bike.\"\n}",
+     "usage": {
+      "candidates_token_count": 35,
+      "prompt_token_count": 135,
+      "total_token_count": 170
+     },
+     "finish_reason": "STOP"
+    }
+   ],
+   "zero": [
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"unclear\",\n  \"reason\": \"The comment assigns blame to both the poster and the roommate.\"\n}",
+     "usage": {
+      "candidates_token_count": 30,
+      "prompt_token_count": 135,
+      "total_token_count": 165
+     },
+     "finish_reason": "STOP"
+    },
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter states that the poster should have asked before borrowing the bike.\"\n}",
+     "usage": {
+      "candidates_token_count": 35,
+      "prompt_token_count": 135,
+      "total_token_count": 170
+     },
+     "finish_reason": "STOP"
+    },
+    {
+     "comment": "C3",
+     "text": "{\n  \"label\": \"poster_at_fault\",\n  \"reason\": \"The commenter states that the poster should have asked before borrowing the bike.\"\n}",
+     "usage": {
+      "candidates_token_count": 35,
+      "prompt_token_count": 135,
+      "total_token_count": 170
+     },
+     "finish_reason": "STOP"
+    }
+   ]
+  }
+ }
+}
