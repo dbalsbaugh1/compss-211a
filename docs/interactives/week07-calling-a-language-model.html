@@ -192,7 +192,8 @@ const SETUP = [
 // Code that later steps load before the student's code, so a step does not depend on an earlier answer.
 const PROMPT_C1 = 'prompt = TEMPLATE.format(text=comments["C1"])';
 const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
-const ASK = 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise\n            print("Error", error.code, "- waiting", wait, "seconds, then trying again")\n            time.sleep(wait)\n            wait = wait * 2';
+const ASK_FN = "def ask(prompt):\n    wait = 10  # seconds\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise  # stop and show the error\n            print(\"Error\", error.code, \"- waiting\", wait, \"seconds, then trying again\")\n            time.sleep(wait)\n            wait = wait * 2  # wait twice as long next time";
+const ASK = 'RETRY_CODES = {429, 503}\n\n' + ASK_FN;
 
 // The variables in the side panel. from: the first step (counted from 0) that has the variable.
 const VARIABLES = [
@@ -301,16 +302,16 @@ const STEPS = [
    after: ['In step 6, Gemini gave C3 <code>unclear</code>. Here it said <code>poster_at_fault</code> three times. With temperature 0, the label still changed between calls.',
            'Temperature 0 makes answers more alike, but not the same. If you label a dataset twice, you can get other counts. Write down the model, the settings and the date with every set of labels.']},
   {topic: 'Try again when the server is busy', stage: 'fail', pre: '_sim.plan({"C4": ["503", "503"]})',
-   intro: ['Calls can fail. Gemini then sends a status code, as OpenAlex did in Week 6. In this step the simulated Gemini answers 503, which means the server is busy, the first two times you ask about C4. Run the example: the loop stops at C4.',
-           'Some errors are temporary. <b>429</b> means too many calls in one minute, and <b>503</b> means the server is busy. If you wait and try again, the call can work. Other errors, such as <b>400</b> (the request is not valid) or <b>404</b> (no model has that name), mean the request itself is wrong. Trying again gives the same error.'],
+   intro: ['In this step the simulated Gemini is busy the first two times you ask about C4. Run the example: the loop stops at C4 with error 503.',
+           'Some errors are temporary, and the same call can work a little later: <b>429</b> (too many calls in one minute) and <b>503</b> (the server is busy). Other errors mean the request itself is wrong, and trying again gives the same error: <b>400</b> (the request is not valid) and <b>404</b> (no model has that name).'],
    example: 'for comment_id, text in comments.items():\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=TEMPLATE.format(text=text), config=CONFIG)\n    print(comment_id, json.loads(response.text)["label"])',
-   task: 'Fill in the two blanks in <code>ask</code>. After a 429 or a 503, <code>ask</code> should wait and try again, and wait twice as long each time: 10, 20, then 40 seconds. After any other error, it should stop.',
-   starter: 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code ____ RETRY_CODES or attempt == 3:\n                raise  # stop, and show the error\n            print("Error", error.code, "- waiting", wait, "seconds, then trying again")\n            time.sleep(wait)\n            wait = wait ____ 2\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
+   task: '<code>ask</code> in the box sends one call. If the call fails with a code in <code>RETRY_CODES</code>, it waits and tries again. Fill in the two codes that are worth trying again.',
+   starter: 'RETRY_CODES = {____, ____}\n\n' + ASK_FN + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
    answer: ASK + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
-   check: {truths: [['len(labels) == 6', 'labels should have a label for all six comments.'],
-                    ['_sim.waits() == [10, 20]', 'ask should wait 10 seconds, then 20: twice as long each time. The second blank multiplies.']]},
-   hint: 'The first blank is <code>not in</code>: stop when the code is not in <code>RETRY_CODES</code>. The second blank is <code>*</code>, so the wait doubles.',
-   after: ['The call for C4 failed twice and worked on the third try. Waiting longer each time gives a busy server more time.',
+   check: {truths: [['RETRY_CODES == {429, 503}', 'RETRY_CODES should hold the two temporary codes: too many calls in one minute, and a busy server.'],
+                    ['len(labels) == 6', 'labels should have a label for all six comments.']]},
+   hint: 'The two codes are <code>429</code> and <code>503</code>.',
+   after: ['The call for C4 failed twice and worked on the third try. <code>ask</code> waited 10 seconds, then 20: twice as long each time, which gives a busy server more time.',
            'This page does not really wait. In a notebook, <code>time.sleep(10)</code> waits 10 seconds.']},
   {topic: 'Don\'t retry every error', stage: 'fail', pre: ASK,
    vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']],
