@@ -198,9 +198,8 @@ const ASK = 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    fo
 const VARIABLES = [
   {name: 'comments', kind: 'dictionary', what: 'the six comments, from ID to text'},
   {name: 'TEMPLATE', kind: 'text', what: 'the prompt, with a <code>{text}</code> slot for one comment'},
-  {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook'},
-  {name: 'LABELS', kind: 'list', what: 'the three labels'},
-  {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the fields the answer must have'},
+  {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook', from: 2},
+  {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the fields the answer must have', from: 4},
   {name: 'GEMINI_MODEL', kind: 'text', what: 'the name of the model'},
   {name: 'client', kind: 'connection', what: 'sends calls to the simulated Gemini'},
   {name: 'CONFIG', kind: 'settings', what: '<code>SYSTEM</code>, JSON and the schema, from step 5', from: 5},
