@@ -440,8 +440,8 @@ export const skills = [
     "weeks": "Week 7",
     "releaseWeek": 7,
     "activity": null,
-    "practice": "Lab 7 — Write an expected result, make a test fail, repair the defect, and rerun tests.",
-    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab07_agentic_code_verification.ipynb"
+    "practice": "Lab 7 — Check with assert that every label Gemini returns is one of the allowed labels.",
+    "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab07_call_gemini_from_python.ipynb"
   },
   {
     "id": "keep-api-keys-safe",

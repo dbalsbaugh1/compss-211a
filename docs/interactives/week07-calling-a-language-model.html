@@ -1,463 +1,929 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calling a language model · COMPSS 211A</title>
-<meta name="description" content="Label six comments with a codebook, see what one call to Gemini sends and gets back, and compare the model's labels with yours. Nothing is sent, and no key is needed.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inter+Tight:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="description" content="Send prompts to a simulated Gemini from Python, read the answers, and handle calls that fail.">
 <style>
-:root{
-  --berkeley:#002676; --ink:#1A1A1A; --paper:#FFFFFF; --card:#FFFFFF;
-  --gold:#FDBA12; --gold-soft:#FFF1CC; --blue-mid:#2A4D9B; --line:#DDDDDD;
-  --ok:#1E7D4E; --err:#B3403A; --code-bg:#0E1B45; --code-ink:#E8EDF6;
-  --serif:"Inter Tight","Inter",-apple-system,"Segoe UI",sans-serif;
-  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{overflow-x:clip}
-body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.6;font-size:16.5px}
-.wrap{max-width:920px;margin:0 auto;padding:0 22px}
-.mast{background:var(--berkeley);margin:0 calc(50% - 50vw);padding:12px calc(50vw - 50%);display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.14)}
-.mast .brand{color:#fff;font-size:.9rem;font-weight:600}
-.mast .brand .uc{font-family:Georgia,"Times New Roman",serif;color:var(--gold);font-size:1.04rem;font-weight:700;margin-right:7px}
-.mast a{color:#fff;font-weight:600;font-size:.83rem;text-decoration:none;border-bottom:1.5px solid rgba(255,255,255,.35)}
-.mast a:hover{border-bottom-color:var(--gold)}
-header{background:var(--berkeley);margin:0 calc(50% - 50vw) 40px;padding:30px calc(50vw - 50%) 28px;border-bottom:5px solid var(--gold)}
-h1{font-family:var(--serif);font-weight:800;color:#fff;font-size:clamp(2rem,5vw,2.9rem);line-height:1.12;margin:0 0 .7rem;letter-spacing:-.015em}
-.chips{display:flex;gap:10px;flex-wrap:wrap;margin:.4rem 0 1rem}
-.chip{display:inline-flex;align-items:center;font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:3px}
-.chip-gold{background:var(--gold);color:var(--berkeley)}
-.chip-line{border:1.5px solid rgba(255,255,255,.55);color:#fff}
-.lede{max-width:700px;color:rgba(255,255,255,.9)}
-h2{font-family:var(--serif);font-weight:600;color:var(--berkeley);font-size:1.5rem;margin:0 0 .35rem}
-h2 .step{margin-right:.35rem}
-h3{font-family:var(--serif);font-size:1.08rem;color:var(--berkeley);margin:0 0 8px}
-.section-note{color:#3A4A63;font-size:.95rem;margin-bottom:1rem;max-width:700px}
-.section-note + .section-note{margin-top:-.4rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px 24px;box-shadow:0 1px 2px rgba(18,35,61,.05);margin-bottom:34px}
-code.inl{font-family:var(--mono);font-size:.8em;background:#ECEFF5;border-radius:4px;padding:1px 6px;overflow-wrap:anywhere}
-a{color:var(--blue-mid)}
-a:focus-visible,button:focus-visible,input:focus-visible+span{outline:2.5px solid var(--gold);outline-offset:2px}
-/* notice about where the responses come from */
-.notice{border:1px dashed #D9A73E;background:var(--gold-soft);border-radius:4px;padding:12px 16px;margin:0 0 30px;font-size:.92rem;color:#4A4020}
-/* codebook */
-.codebook{border-left:4px solid var(--gold);background:#FAFAFA;padding:12px 16px;margin:0 0 18px;font-size:.93rem}
-.codebook dt{font-family:var(--mono);font-size:.82rem;color:var(--berkeley);font-weight:500}
-.codebook dd{margin:0 0 8px}
-.codebook dd:last-child{margin-bottom:0}
-.codebook mark{background:var(--gold-soft);padding:0 2px}
-/* comment rows for hand labels */
-fieldset.item{border:0;border-top:1px solid var(--line);padding:14px 0 12px}
-fieldset.item:first-of-type{border-top:0;padding-top:0}
-fieldset.item legend{font-size:.95rem;padding:0;margin-bottom:8px;float:left;width:100%}
-fieldset.item legend b{font-family:var(--mono);font-size:.8rem;color:var(--blue-mid);margin-right:6px}
-.pills{display:flex;flex-wrap:wrap;gap:8px;clear:both}
-.pill{position:relative}
-.pill input{position:absolute;opacity:0;width:1px;height:1px}
-.pill span{display:inline-block;font-family:var(--mono);font-size:.78rem;border:1.5px solid var(--line);border-radius:4px;padding:5px 11px;cursor:pointer;background:#fff}
-.pill input:checked+span{border-color:var(--berkeley);background:#EEF3F9;color:var(--berkeley);font-weight:500}
-.pill input:disabled+span{cursor:default}
-/* buttons */
-.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
-button.btn{font-family:var(--sans);font-weight:600;font-size:.9rem;color:#fff;background:var(--berkeley);border:none;border-radius:4px;padding:9px 18px;cursor:pointer}
-button.btn:hover{box-shadow:0 6px 16px rgba(0,38,118,.22)}
-button.btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
-button.btn-ghost{background:#fff;color:var(--berkeley);border:1.5px solid var(--berkeley)}
-.msg{font-size:.9rem;color:#3A4A63}
-.msg.bad{color:var(--err)}
-/* code and request/response panels */
-pre.code{background:var(--code-bg);color:var(--code-ink);border-radius:4px;padding:14px 16px;font-family:var(--mono);font-size:.78rem;line-height:1.7;overflow-x:auto;white-space:pre;margin:0 0 16px}
-pre.code .c{color:#7C8CA5}
-pre.code .s{color:#A8C7EE}
-pre.code .k{color:#F5C860}
-pre.code .n{color:#8FD8B0}
-.parts{display:grid;gap:12px;margin-bottom:16px}
-.part{border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.part .label{background:#EEF3F9;color:var(--berkeley);font-weight:600;font-size:.82rem;padding:6px 12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.part .label span{font-weight:400;color:#51607A}
-.part pre{margin:0;padding:10px 12px;font-family:var(--mono);font-size:.78rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;background:#FBFCFE}
-.simtag{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#0E1B2C;background:var(--gold);border-radius:3px;padding:2px 10px}
-.response{margin-top:16px}
-.response[hidden]{display:none}
-/* prediction cards */
-.qcard{border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin:0 0 16px;background:#FAFAFA}
-.qcard .opts{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
-.qcard label{display:flex;gap:10px;align-items:flex-start;font-size:.93rem;cursor:pointer}
-.qcard input[type=radio]{margin-top:5px;accent-color:var(--berkeley)}
-.verdict{border-radius:4px;padding:10px 14px;font-size:.92rem;margin-top:10px;display:none}
-.verdict.show{display:block}
-.verdict.good{background:#E8F4EC;color:var(--ok);border:1px solid #BFE0CB}
-.verdict.bad{background:#F9E9E7;color:var(--err);border:1px solid #EAC7C3}
-/* comparison list */
-.compare{list-style:none;margin:0}
-.compare li{border-top:1px solid var(--line);padding:12px 0}
-.compare li:first-child{border-top:0;padding-top:0}
-.compare .text{font-size:.93rem;margin-bottom:6px}
-.compare .text b{font-family:var(--mono);font-size:.8rem;color:var(--blue-mid);margin-right:6px}
-.compare .row{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;align-items:baseline}
-.compare .who{color:#51607A}
-.compare .lab{font-family:var(--mono);font-size:.78rem}
-.compare .why{font-size:.85rem;color:#51607A;margin-top:4px}
-.compare .flag{font-weight:600}
-.compare .flag.same{color:var(--ok)}
-.compare .flag.diff{color:var(--err)}
-.compare li.flipped{background:var(--gold-soft);margin:0 -10px;padding-left:10px;padding-right:10px}
-.tally{font-weight:600;color:var(--berkeley);margin:0 0 14px}
-.switch{display:inline-flex;margin-bottom:14px}
-.switch button{font-family:var(--sans);font-size:.86rem;padding:6px 14px;border:1.5px solid var(--berkeley);background:#fff;color:var(--berkeley);cursor:pointer}
-.switch button:first-child{border-radius:4px 0 0 4px}
-.switch button+button{border-left:0;border-radius:0 4px 4px 0}
-.switch button[aria-pressed=true]{background:var(--berkeley);color:#fff;font-weight:600}
-.runs{list-style:none;margin:10px 0 0;font-size:.88rem}
-.runs li{padding:6px 0;border-top:1px solid var(--line)}
-.runs li:first-child{border-top:0}
-.runs .lab{font-family:var(--mono);font-size:.78rem;font-weight:500}
-.recap{background:linear-gradient(0deg,rgba(0,38,118,.045),rgba(0,38,118,.045)),var(--card)}
-.recap ul{margin:8px 0 0 20px}
-.recap li{margin-bottom:7px;font-size:.95rem}
-.recap li::marker{color:var(--gold)}
-footer{background:var(--berkeley);color:rgba(255,255,255,.85);margin:44px calc(50% - 50vw) 0;padding:20px calc(50vw - 50%) 26px;font-size:.85rem}
-footer a{color:#fff}
-@media (max-width:600px){.card{padding:18px 16px}.wrap{padding:0 16px}}
+:root{--navy:#002676;--gold:#FDBA12;--ink:#1A1A1A;--muted:#465973;--line:#CBD4E1;--pale:#EEF3FA;--paper:#fff;--mark:#FFF1CC;--good:#17643C;--bad:#9B1C1C;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+a{color:var(--navy)}
+button,textarea,select{font:inherit}
+button{cursor:pointer;border:1px solid var(--navy);border-radius:4px;padding:8px 14px;color:var(--navy);background:white;font-weight:600}
+button:hover:not(:disabled){background:var(--pale)}
+button:disabled{cursor:default;opacity:.55}
+button:focus-visible,a:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.primary{background:var(--navy);color:white}
+.primary:hover:not(:disabled){background:#173F91}
+.quiet{border-color:transparent;text-decoration:underline;font-weight:400;padding:2px 4px}
+.wrap{max-width:1180px;margin:auto;padding:0 24px}
+.mast{background:var(--navy);color:white}
+.mast .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:13px;padding-bottom:13px;font-size:.88rem}
+.mast a{color:white}
+.brand{font:700 1.05rem Georgia,serif;color:var(--gold);margin-right:12px}
+header{background:var(--navy);color:white;border-bottom:5px solid var(--gold);padding:24px 0 26px}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.15;letter-spacing:-.02em;margin:0 0 12px}
+header p{max-width:720px;margin:0 0 10px}
+.meta{font-size:.9rem;color:#DFE8FF}
+main.wrap{padding-top:24px;padding-bottom:40px}
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:32px;align-items:start}
+h2{color:var(--navy);font-size:1.3rem;line-height:1.3;margin:2px 0 10px}
+h2:focus{outline:none}
+h3{margin:14px 0 2px;color:var(--navy);font-size:1rem;font-family:var(--mono)}
+h4{margin:18px 0 6px;color:var(--navy);font-size:1rem}
+p{max-width:75ch;margin:8px 0 12px}
+.small{font-size:.88rem;color:var(--muted)}
+code{font-family:var(--mono);font-size:.88em}
+.reference{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;border:1px solid var(--line);border-radius:6px;padding:12px 16px;font-size:.9rem}
+.reference > details > summary{font-size:1.05rem}
+.reference p{margin:4px 0}
+.name{border:0;border-radius:2px;background:none;padding:0 2px;margin-left:-2px;font:inherit;color:inherit;text-align:left}
+.name:hover:not(:disabled){background:var(--mark)}
+.work{min-width:0}
+.status{padding:10px 14px;background:var(--mark);margin:0 0 16px}
+.status.ready{display:none}
+.status.error{background:#FBEAEA}
+.pager{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:0 0 16px}
+.pager select{padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink);max-width:100%}
+.progress{font-size:.9rem;color:var(--muted);margin-left:auto}
+.q{border:1px solid var(--line);border-radius:6px;padding:18px 18px 14px;scroll-margin-top:16px}
+.q .level{font-size:.88rem;color:var(--muted)}
+.task{font-size:1.08rem;margin:6px 0 12px}
+.task b{color:var(--navy)}
+.example{border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:8px 0 6px}
+.example .label{padding:6px 12px;background:var(--pale);color:var(--navy);font-weight:600;font-size:.88rem}
+pre{background:#101F48;color:#F0F4FF;font:13px/1.6 var(--mono);padding:12px 14px;margin:0;overflow:auto;white-space:pre-wrap}
+pre.answer{border-radius:4px}
+/* What the code printed. Lighter than the code, and it scrolls when it is long. */
+pre.out{background:#F6F8FC;color:var(--ink);border:1px solid var(--line);border-radius:4px;max-height:380px;margin:8px 0 12px;overflow-wrap:anywhere}
+pre.out:empty{display:none}
+.err{color:var(--bad)}
+.dim{color:var(--muted)}
+textarea{width:100%;min-height:150px;font-family:var(--mono);font-size:.9rem;line-height:1.5;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:#FBFCFE;color:var(--ink);resize:vertical;tab-size:4}
+.actions{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:10px 0}
+.feedback{margin:8px 0;padding:10px 12px;border-radius:4px;font-size:.95rem;display:none}
+.feedback.show{display:block}
+.feedback.good{background:#E8F4EC;color:var(--good)}
+.feedback.bad{background:#FBEAEA;color:var(--bad)}
+.feedback p{margin:0 0 8px;color:var(--ink)}
+.feedback p:last-child{margin-bottom:0}
+details{margin:6px 0}
+summary{cursor:pointer;color:var(--navy);font-weight:600}
+a.button{display:inline-block;border:1px solid var(--navy);border-radius:4px;padding:8px 14px;font-weight:600;text-decoration:none;background:white}
+a.button:hover{background:var(--pale)}
+.scratch{border:1px solid var(--line);border-radius:6px;padding:10px 18px;margin-top:16px}
+.scratch textarea{min-height:96px}
+.brief{border:1px solid var(--line);border-radius:4px;padding:10px 14px 12px;margin:0 0 16px;background:#FFFDF5}
+.brief p{margin:0 0 8px}
+.stages{display:flex;flex-wrap:wrap;gap:6px 0;list-style:none;margin:0;padding:0;font-size:.88rem;color:var(--muted)}
+.stages li{display:flex;align-items:center}
+.stages li + li::before{content:"→";margin:0 8px;color:var(--muted)}
+.stages span{padding:2px 9px;border-radius:3px}
+.stages li[aria-current=step] span{background:var(--navy);color:white;font-weight:600}
+.stages li.done span{color:var(--good)}
+.source{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:.88rem}
+.switch{display:inline-flex}
+.switch button{padding:3px 11px;font-size:.86rem;font-weight:400;border-radius:4px 0 0 4px}
+.switch button + button{border-left:0;border-radius:0 4px 4px 0}
+.switch button[aria-pressed=true]{background:var(--navy);color:white;font-weight:600}
+.reference > details + details{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.outline ul{list-style:none;margin:0;padding-left:14px;border-left:1px solid var(--line)}
+.outline > ul{padding-left:0;border-left:0}
+.outline li{margin:1px 0;font-family:var(--mono);font-size:.82rem;line-height:1.5;color:var(--navy)}
+.outline .kind{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:.78rem;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;color:var(--muted)}
+[hidden]{display:none!important}
+.codebook{margin:6px 0 0;font-size:.86rem}
+.codebook dt{font-family:var(--mono);font-size:.8rem;color:var(--navy);margin-top:6px}
+.codebook dd{margin:0}
+.comment-list{margin:6px 0 0;padding-left:0;list-style:none;font-size:.86rem}
+.comment-list li{margin:0 0 6px}
+.comment-list b{font-family:var(--mono);font-size:.8rem;color:var(--navy);margin-right:6px}
+@media(max-width:860px){.wrap{padding-left:16px;padding-right:16px}.layout{grid-template-columns:minmax(0,1fr);gap:16px}.reference{position:static;max-height:none}.q{padding:14px 12px}.progress{margin-left:0}.pager select{width:100%}}
 </style>
 </head>
 <body>
-<div class="wrap">
-<div class="mast"><span class="brand"><span class="uc">UC Berkeley</span>COMPSS 211A · Computing I</span><a href="../index.html">← All interactives</a></div>
+<div class="mast"><div class="wrap"><span><span class="brand">UC Berkeley</span>COMPSS 211A · Computing I</span><a href="../index.html">All interactives</a></div></div>
+<header><div class="wrap">
+<h1>Calling a language model</h1>
+<p>Send prompts to a simulated Gemini from Python and read its answers.</p>
+<div class="meta">Week 7 · In class · Simulated: nothing is sent to Gemini, and you need no key</div>
+</div></header>
 
-<header>
-  <h1>Calling a language model</h1>
-  <div class="chips">
-    <span class="chip chip-gold">Week 7 · Language model APIs</span>
-    <span class="chip chip-line">About 10 minutes</span>
-    <span class="chip chip-line">Simulated: nothing is sent, no key needed</span>
-  </div>
-  <p class="lede">
-    Researchers often label texts by hand: they read each one and give it a category from a
-    codebook. This is also called coding or annotation. A language model can do the same through
-    an API. Here you label six comments yourself, see what one call to Gemini sends and gets back,
-    and compare its labels with yours.
-  </p>
-</header>
+<main class="wrap layout">
+<aside class="reference" aria-label="What is loaded">
+<details id="loadedBox" open><summary>Already loaded</summary>
+  <p class="small">Click a name to put it in your code.</p>
+  <h3><button type="button" class="name" data-name="comments">comments</button></h3>
+  <p class="small">The six comments: a dictionary from ID to text.</p>
+  <h3><button type="button" class="name" data-name="TEMPLATE">TEMPLATE</button></h3>
+  <p class="small">The prompt, with a <code>{text}</code> slot for one comment.</p>
+  <h3><button type="button" class="name" data-name="SYSTEM">SYSTEM</button></h3>
+  <p class="small">The system instruction: the task and the codebook.</p>
+  <h3><button type="button" class="name" data-name="LABELS">LABELS</button></h3>
+  <p class="small">The three labels, as a list.</p>
+  <h3><button type="button" class="name" data-name="LABEL_SCHEMA">LABEL_SCHEMA</button></h3>
+  <p class="small">The fields the answer must have.</p>
+  <h3><button type="button" class="name" data-name="CONFIG">CONFIG</button></h3>
+  <p class="small">The settings from step 5: <code>SYSTEM</code> and the schema.</p>
+  <h3><button type="button" class="name" data-name="GEMINI_MODEL">GEMINI_MODEL</button></h3>
+  <p class="small">The name of the model.</p>
+  <h3><button type="button" class="name" data-name="client">client</button></h3>
+  <p class="small">The connection to the simulated Gemini.</p>
+  <p class="small" style="margin-top:10px">Also loaded: <code>json</code>, <code>pd</code>, <code>time</code>, <code>Path</code>, <code>date</code>, and <code>types</code> and <code>errors</code> from <code>google.genai</code>.</p>
+</details>
+<details id="codebookBox"><summary>The post and the codebook</summary>
+  <p class="small" id="post">Loading…</p>
+  <dl class="codebook" id="codebook"></dl>
+</details>
+<details id="commentsBox"><summary>The comments</summary>
+  <ul class="comment-list" id="commentList"><li class="small">Loading…</li></ul>
+</details>
+</aside>
 
-<div class="notice" id="notice" hidden></div>
-<p class="msg bad" id="loadError" hidden>The saved responses could not be loaded. Reload the page.</p>
-
-<!-- 1 · hand labels -->
-<section aria-labelledby="s1">
-  <h2 id="s1"><span class="step">1·</span>Label the comments yourself</h2>
-  <p class="section-note"><b>The post:</b> <span id="post"></span></p>
-  <p class="section-note">
-    A codebook lists the labels and says what each one means. Read it, then give each comment one
-    label. Label them before you see the model's labels, so that its answers don't change yours.
-  </p>
-  <div class="card">
-    <dl class="codebook" id="codebook1"></dl>
-    <form id="handForm"></form>
-    <div class="actions">
-      <button class="btn" id="saveLabels" type="button">Save my labels</button>
-      <span class="msg" id="saveMsg" aria-live="polite"></span>
-    </div>
-  </div>
-</section>
-
-<!-- 2 · one call -->
-<section aria-labelledby="s2">
-  <h2 id="s2"><span class="step">2·</span>What one call sends and gets back</h2>
-  <p class="section-note">
-    In Python, you call Gemini with <code class="inl">client.models.generate_content(...)</code>.
-    The call sends the name of the model, a <b>system instruction</b> with the task and the codebook, a
-    <b>prompt</b> with one comment, and settings. Here the settings are a <b>schema</b>, which lists
-    the fields the answer must have and the labels it may use, and the <b>temperature</b>.
-  </p>
-  <div class="card">
-    <pre class="code" id="callCode"></pre>
-    <div class="parts" id="requestParts"></div>
-
-    <div class="qcard">
-      <h3>Before you send: predict</h3>
-      <p style="font-size:.93rem">What will <code class="inl">response.text</code> be?</p>
-      <div class="opts" role="radiogroup" aria-label="What response.text will be">
-        <label><input type="radio" name="p1" value="dict"> A Python dictionary with the keys <code class="inl">label</code> and <code class="inl">reason</code></label>
-        <label><input type="radio" name="p1" value="str"> A string: text that is written as JSON</label>
-      </div>
-      <button class="btn" type="button" id="checkP1">Check</button>
-      <div class="verdict" id="v-p1" aria-live="polite"></div>
-    </div>
-
-    <button class="btn" type="button" id="sendOne">Send the call</button>
-    <div class="response" id="responseOne" hidden aria-live="polite"></div>
-  </div>
-</section>
-
-<!-- 3 · all six -->
-<section aria-labelledby="s3">
-  <h2 id="s3"><span class="step">3·</span>Label all six and compare</h2>
-  <p class="section-note">
-    A loop sends the same system instruction with each comment in turn. Then you put the model's
-    labels next to yours.
-  </p>
-  <div class="card">
-    <div class="actions" style="margin-top:0;margin-bottom:14px">
-      <button class="btn" type="button" id="sendAll">Send all six</button>
-      <span class="msg" id="sendAllMsg" aria-live="polite"></span>
-    </div>
-    <div id="compareOut" aria-live="polite"></div>
-
-    <div class="qcard" id="q2" hidden>
-      <h3>Look at C3</h3>
-      <p style="font-size:.93rem">C3 says the poster should have asked, and that the roommate should not have yelled. Which label does the codebook give a comment like that?</p>
-      <div class="opts" role="radiogroup" aria-label="Which label the codebook gives C3">
-        <label><input type="radio" name="p2" value="a"> <span><code class="inl">poster_at_fault</code></span></label>
-        <label><input type="radio" name="p2" value="b"> <span><code class="inl">poster_not_at_fault</code></span></label>
-        <label><input type="radio" name="p2" value="c"> <span><code class="inl">unclear</code></span></label>
-        <label><input type="radio" name="p2" value="d"> The codebook does not say</label>
-      </div>
-      <button class="btn" type="button" id="checkP2">Check</button>
-      <div class="verdict" id="v-p2" aria-live="polite"></div>
-    </div>
-  </div>
-</section>
-
-<!-- 4 · change one definition -->
-<section aria-labelledby="s4">
-  <h2 id="s4"><span class="step">4·</span>Change one definition</h2>
-  <p class="section-note">
-    Version 2 of the codebook changes one definition: a comment that blames both people is now
-    <code class="inl">unclear</code>. Nothing else changes. Switch between the versions and see
-    which labels change.
-  </p>
-  <div class="card">
-    <div class="switch" role="group" aria-label="Codebook version">
-      <button type="button" data-version="v1" aria-pressed="true">Version 1</button>
-      <button type="button" data-version="v2" aria-pressed="false">Version 2</button>
-    </div>
-    <dl class="codebook" id="codebook2"></dl>
-    <div id="versionOut" aria-live="polite"></div>
-  </div>
-</section>
-
-<!-- 5 · ask again -->
-<section aria-labelledby="s5">
-  <h2 id="s5"><span class="step">5·</span>Ask the same question again</h2>
-  <p class="section-note">
-    A language model picks each word with some chance. The <b>temperature</b> sets how much chance.
-    Send the same call for C3 three times with the default temperature, and three times with the
-    temperature set to 0.
-  </p>
-  <div class="card">
-    <div class="actions" style="margin-top:0">
-      <button class="btn" type="button" data-repeat="default">Send 3 times, default temperature</button>
-      <button class="btn btn-ghost" type="button" data-repeat="zero">Send 3 times, temperature 0</button>
-    </div>
-    <div id="repeatOut" aria-live="polite"></div>
-  </div>
-</section>
-
-<!-- recap -->
-<section aria-labelledby="s6">
-  <h2 id="s6"><span class="step">✓</span>Remember</h2>
-  <div class="card recap">
-    <ul>
-      <li>A codebook names the labels and defines each one. The model only knows what the system instruction tells it.</li>
-      <li>One call sends the model name, a system instruction, a prompt and settings. The answer comes back as text. With a schema, that text is JSON, and <code class="inl">json.loads</code> turns it into a dictionary.</li>
-      <li>The response also says how many tokens went in and came out. Services charge by the token.</li>
-      <li>Label a sample yourself before you trust the model. Read every disagreement: one of you misread the comment, or the definition does not cover it.</li>
-      <li>A change to one definition can change the labels. So can sending the same call again. Save the model name, the codebook version, the temperature and the date with every set of labels.</li>
-    </ul>
-  </div>
-</section>
-
-<footer>COMPSS 211A · UC Berkeley · CC BY 4.0 · Nothing on this page is sent to Gemini, and nothing you choose is saved. The responses come from <a href="data/week07/gemini_responses.json">a saved file</a>. On Monday you send these calls yourself, with your own key.</footer>
+<div class="work">
+<div class="status" id="engineStatus" role="status">Loading the saved responses…</div>
+<div class="brief">
+  <p><b>The question.</b> Six comments reply to a post about a borrowed bike. Can Gemini label them with your codebook the way you would?</p>
+  <ol class="stages" id="stages" aria-label="Where you are">
+    <li data-stage="yours"><span>Your labels</span></li><li data-stage="call"><span>One call</span></li><li data-stage="json"><span>JSON</span></li><li data-stage="all"><span>Every comment</span></li><li data-stage="fail"><span>Failed calls</span></li><li data-stage="record"><span>Record</span></li>
+  </ol>
 </div>
+<nav class="pager" aria-label="Steps">
+  <select id="picker" aria-label="Go to step"></select>
+  <button id="prev">Previous</button>
+  <button id="next">Next</button>
+  <span class="progress" id="progress" aria-live="polite"></span>
+</nav>
+<div id="steps"></div>
+<details class="scratch"><summary>Scratch code</summary>
+  <p class="small">Run any Python here. It does not change your answers. <code>client</code> is the simulated Gemini here too.</p>
+  <textarea id="scratch" spellcheck="false" autocomplete="off" aria-label="Scratch code">print(SYSTEM)</textarea>
+  <div class="actions"><button data-act="scratch" disabled>Run</button></div>
+  <pre class="out" id="scratch-out"></pre>
+</details>
+<p class="small" style="margin-top:18px"><button id="reset" class="quiet">Start over</button> Clears your code and checks on this page.</p>
+</div>
+</main>
 
+<footer><div class="wrap">COMPSS 211A · UC Berkeley · CC BY 4.0. Python runs in your browser with Pyodide. Nothing is sent to Gemini: the simulated Gemini answers with <a href="data/week07/gemini_responses.json">responses recorded</a> from gemini-3.5-flash-lite on October 14, 2026. Your code is saved in this browser only. In Lab 7 you send these calls yourself, with your own key.</div></footer>
+
+<script src="sandbox/sandbox.js"></script>
 <script>
-"use strict";
+'use strict';
+// The recorded responses. The file sits in data/week07/ next to this page and is read by the Python code as a file.
+const DATA_FILES = ['gemini_responses.json'];
+const FILES = {};
+const ROOT = '/home/you/week07';
+let DATA = null;
+
+// Every run starts from this code, so a step never depends on what an earlier run left behind.
+// google.genai here is the simulated one defined in HELPERS below. It has the same names as the real package.
+const SETUP = [
+  'import json',
+  'import time',
+  'from datetime import date',
+  'from pathlib import Path',
+  'import pandas as pd',
+  'from google import genai',
+  'from google.genai import errors, types',
+  'import compss_sim as _sim',
+  '_sim.reset()',
+  'pd.set_option("display.width", 200)',
+  'pd.set_option("display.max_columns", 20)',
+  'pd.set_option("display.max_colwidth", 70)',
+  'client = genai.Client(api_key="SIMULATED")',
+  'GEMINI_MODEL = "gemini-3.5-flash-lite"',
+  'SYSTEM = _sim.data()["system"]["v1"]',
+  'TEMPLATE = _sim.data()["template"]',
+  'LABELS = list(_sim.data()["labels"])',
+  'LABEL_SCHEMA = _sim.data()["schema"]',
+  'comments = {c["id"]: c["text"] for c in _sim.data()["comments"]}',
+  'CONFIG = types.GenerateContentConfig(system_instruction=SYSTEM, response_mime_type="application/json", response_schema=LABEL_SCHEMA)',
+].join('\n');
+
+// Code that later steps load before the student's code, so a step does not depend on an earlier answer.
+const PROMPT_C1 = 'prompt = TEMPLATE.format(text=comments["C1"])';
+const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
+const ASK = 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise\n            print("Error", error.code, "- waiting", wait, "seconds, then trying again")\n            time.sleep(wait)\n            wait = wait * 2';
+
+// One entry per step.
+// starter: what the box starts with; scaffold: a starting point with blanks, offered in the hint.
+// answer: the model code. check.exprs: expressions compared after the student's code and after the model code.
+// check.truths: tests on the student's own result, for a step with more than one right answer.
+// errorHints: [pattern, message] pairs for errors that a wrong answer in this step causes.
+// pre: code run before the student's code. needsLabels: the step also runs the student's code from step 1.
+// example: code that is shown and can be run. after: shown once the answer is correct.
+// stage: where the step sits in Your labels, One call, JSON, Every comment, Failed calls, Record. intro and after can be a list of paragraphs.
+const STEPS = [
+  {topic: 'Label the comments yourself', stage: 'yours',
+   intro: ['Researchers often label texts by hand. They read each text and give it a label from a <b>codebook</b>: a list of the labels and what each one means. A language model can do the same through an API.',
+           'Open “The post and the codebook” and “The comments” in the side panel. Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.'],
+   task: 'Replace each <code>____</code> with one label: <code>poster_at_fault</code>, <code>poster_not_at_fault</code> or <code>unclear</code>.',
+   starter: 'my_labels = {\n    "C1": "____",\n    "C2": "____",\n    "C3": "____",\n    "C4": "____",\n    "C5": "____",\n    "C6": "____",\n}\nmy_labels',
+   answer: 'my_labels = {\n    "C1": "poster_at_fault",\n    "C2": "poster_not_at_fault",\n    "C3": "unclear",\n    "C4": "poster_at_fault",\n    "C5": "unclear",\n    "C6": "unclear",\n}\nmy_labels',
+   check: {truths: [['isinstance(my_labels, dict) and sorted(my_labels) == sorted(comments)', 'my_labels should have one entry for each comment, C1 to C6.'],
+                    ['all(label in LABELS for label in my_labels.values())', 'Each label should be poster_at_fault, poster_not_at_fault or unclear, spelled exactly like that.']]},
+   hint: 'Each value is one of the three labels, in quotation marks, such as <code>"C1": "poster_at_fault"</code>. There is no single right answer: these are your labels.',
+   after: 'Step 7 puts your labels next to Gemini\'s.'},
+  {topic: 'Fill in the template', stage: 'call',
+   intro: ['You send the model a <b>prompt</b>: the text it answers. To label many comments, you write the prompt once as a <b>template</b>, with a slot for the comment, and fill the slot for each comment in turn.',
+           '<code>TEMPLATE</code> is loaded. Its slot is written <code>{text}</code>. <code>.format(text=...)</code> fills the slot and gives back new text.'],
+   example: 'print(TEMPLATE)\nprint("---")\nprint("Hello, {name}!".format(name="Ana"))',
+   task: 'Run the example. Then fill in the blank to make <code>prompt</code>: <code>TEMPLATE</code> with the slot filled with comment C1.',
+   starter: 'prompt = TEMPLATE.____(text=comments["C1"])\nprint(prompt)',
+   answer: 'prompt = TEMPLATE.format(text=comments["C1"])\nprint(prompt)',
+   check: {exprs: ['prompt']},
+   hint: 'The blank is <code>format</code>, as in the example.',
+   after: 'In step 6, a loop fills the template with each comment in turn.'},
+  {topic: 'Send one call', stage: 'call', pre: PROMPT_C1,
+   intro: ['<code>client.models.generate_content(...)</code> sends one call. It sends the name of the model, the prompt as <code>contents</code>, and settings as <code>config</code>. The answer is in <code>response.text</code>.',
+           'The <b>system instruction</b> goes in the settings. It holds the task and the codebook, and it is the same for every comment. The example sends the prompt without one. <code>prompt</code> from the last step is loaded.'],
+   example: 'response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)\nprint(response.text)',
+   task: 'Run the example. Then fill in the two blanks: the first is the name of the method that sends the call, and the second is the prompt. The call in the box sends <code>SYSTEM</code> as the system instruction.',
+   starter: 'response = client.models.____(\n    model=GEMINI_MODEL,\n    contents=____,\n    config=types.GenerateContentConfig(system_instruction=SYSTEM),\n)\nprint(response.text)',
+   answer: 'response = client.models.generate_content(\n    model=GEMINI_MODEL,\n    contents=prompt,\n    config=types.GenerateContentConfig(system_instruction=SYSTEM),\n)\nprint(response.text)',
+   check: {truths: [['_sim.last() is not None and _sim.last()["comment"] == "C1"', 'The call should send the prompt for comment C1. The second blank is prompt.'],
+                    ['_sim.last()["system"] == SYSTEM', 'The call should send SYSTEM as the system instruction. Keep the config line as it is.']]},
+   hint: 'The first blank is <code>generate_content</code>. The second blank is <code>prompt</code>.',
+   after: 'Without a system instruction, the model did not know which labels to use. With one, it answered with a label in its own words.'},
+  {topic: 'Read the rest of the response', stage: 'call',
+   pre: PROMPT_C1 + '\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=types.GenerateContentConfig(system_instruction=SYSTEM))',
+   intro: ['A response has more than the text. <code>response.usage_metadata</code> counts the <b>tokens</b>: the pieces of words that went in and came out. <code>prompt_token_count</code> is the tokens in, and <code>candidates_token_count</code> is the tokens out.',
+           'The system instruction is sent again with every call, so it is counted in every prompt. Services charge by the token.',
+           '<code>response.candidates[0].finish_reason</code> says why the model stopped. <code>STOP</code> means it finished its answer. <code>response</code> from the last step is loaded.'],
+   example: 'print(response.usage_metadata)\nprint(response.candidates[0].finish_reason)',
+   task: 'Run the example. Then fill in the blanks: <code>n_in</code> is the number of tokens in, and <code>n_out</code> is the number of tokens out.',
+   starter: 'n_in = response.usage_metadata.____\nn_out = response.usage_metadata.____\nprint(n_in, n_out)',
+   answer: 'n_in = response.usage_metadata.prompt_token_count\nn_out = response.usage_metadata.candidates_token_count\nprint(n_in, n_out)',
+   check: {exprs: ['n_in', 'n_out']},
+   hint: 'The first blank is <code>prompt_token_count</code>. The second is <code>candidates_token_count</code>.',
+   after: 'Most of the tokens in are the system instruction. A long codebook costs more for every text you label.'},
+  {topic: 'Ask for JSON', stage: 'json', pre: PROMPT_C1,
+   intro: ['An answer in the model\'s own words is hard to put in a table. A <b>schema</b> lists the fields the answer must have and the labels it may use. <code>LABEL_SCHEMA</code> is loaded: click it in the side panel and run it in the scratch box to see it.',
+           'Two settings ask for JSON: <code>response_mime_type="application/json"</code> and <code>response_schema=LABEL_SCHEMA</code>. The answer still comes back as text, in <code>response.text</code>. <code>json.loads</code> turns that text into a dictionary, as <code>response.json()</code> did in Week 6.'],
+   task: 'Fill in the three blanks. The first passes the schema. The second turns the text into a dictionary. The third is the key that holds the label.',
+   starter: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=____,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(type(response.text))\nprint(response.text)\n\nanswer = json.____(response.text)\nlabel = answer["____"]\nlabel',
+   answer: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(type(response.text))\nprint(response.text)\n\nanswer = json.loads(response.text)\nlabel = answer["label"]\nlabel',
+   check: {exprs: ['answer', 'label']},
+   hint: 'The first blank is <code>LABEL_SCHEMA</code>, the second is <code>loads</code>, and the third is <code>label</code>.',
+   after: 'From here on, <code>CONFIG</code> holds these settings: <code>SYSTEM</code>, JSON and the schema.'},
+  {topic: 'Label every comment', stage: 'all',
+   intro: 'A loop sends the same system instruction with each comment in turn. <code>comments.items()</code> gives each ID with its text. Each answer becomes one row of a table.',
+   task: 'Fill in the two blanks. The first fills the template with the comment\'s text. The second is the key that holds the label.',
+   starter: 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=____)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["____"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)\nresults',
+   answer: LOOP + '\nresults',
+   check: {exprs: ['results'], ordered: true, names: true},
+   hint: 'The first blank is <code>text</code>, the loop variable that holds the comment. The second is <code>label</code>.',
+   after: 'The loop sent six calls, one for each comment, and made one row from each answer.'},
+  {topic: 'Compare with your labels', stage: 'all', needsLabels: true, pre: LOOP,
+   intro: '<code>results</code> from the last step and <code>my_labels</code> from step 1 are loaded. <code>.map(my_labels)</code> looks up each ID in your dictionary.',
+   task: 'Fill in the two blanks. The first adds your labels as a column. The second counts the rows where you and Gemini agree: <code>True</code> counts as 1.',
+   starter: 'results["my_label"] = results["document_id"].map(____)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].____()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
+   answer: 'results["my_label"] = results["document_id"].map(my_labels)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].sum()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
+   check: {exprs: ['n_same']},
+   hint: 'The first blank is <code>my_labels</code>. The second is <code>sum</code>.',
+   after: ['Neither set of labels is the right answer. Where you differ, read the comment and Gemini\'s reason again. Either one of you misread it, or the codebook does not cover it.',
+           'C3 blames both people. The codebook has no rule for that, so you and the model each had to guess.']},
+  {topic: 'Ask the same question again', stage: 'all', pre: '_sim.repeat_mode(True)\nprompt = TEMPLATE.format(text=comments["C3"])',
+   intro: ['A language model picks each word with some chance. The <b>temperature</b> setting sets how much chance: 0 means as little as possible.',
+           'The box sends the same call for C3 three times with the default temperature, and three times with the temperature set to 0. <code>prompt</code> for C3 is loaded.'],
+   task: 'Fill in the two blanks: the temperature, and the settings that the second loop sends.',
+   starter: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\n\nzero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=____,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=____)\n    labels_zero.append(json.loads(response.text)["label"])\n\nprint(labels_default)\nprint(labels_zero)',
+   answer: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\n\nzero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=0,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    labels_zero.append(json.loads(response.text)["label"])\n\nprint(labels_default)\nprint(labels_zero)',
+   check: {exprs: ['list(labels_default)', 'list(labels_zero)']},
+   hint: 'The first blank is <code>0</code>. The second is <code>zero</code>, the settings made just above it.',
+   after: ['In step 6, Gemini gave C3 <code>unclear</code>. Here it said <code>poster_at_fault</code> three times. With temperature 0, the label still changed between calls.',
+           'Temperature 0 makes answers more alike, but not the same. If you label a dataset twice, you can get other counts. Write down the model, the settings and the date with every set of labels.']},
+  {topic: 'When a call fails', stage: 'fail', pre: '_sim.plan({"C4": ["503", "503"]})',
+   intro: ['When you send many calls, some fail. Gemini answers with a status code, as OpenAlex did in Week 6. Two codes are temporary: <b>429</b> means too many calls in one minute, and <b>503</b> means the server is busy. The same call can work a little later.',
+           'Other codes, such as <b>400</b> (the request is not valid) or <b>404</b> (nothing has that name), mean the request itself is wrong. Trying again gives the same answer.',
+           'In this step the simulated Gemini is busy when you ask about C4. The example labels the comments without handling that.'],
+   example: 'for comment_id, text in comments.items():\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=TEMPLATE.format(text=text), config=CONFIG)\n    print(comment_id, json.loads(response.text)["label"])',
+   task: 'Run the example and read the last line of the error. Then fill in the two blanks in <code>ask</code>. It should try again after a 429 or a 503, wait twice as long each time (10, 20, 40 seconds), and stop at once after any other error.',
+   starter: 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code ____ RETRY_CODES or attempt == 3:\n                raise  # stop, and show the error\n            print("Error", error.code, "- waiting", wait, "seconds, then trying again")\n            time.sleep(wait)\n            wait = wait ____ 2\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
+   answer: ASK + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
+   check: {truths: [['len(labels) == 6', 'labels should have a label for all six comments.'],
+                    ['_sim.waits() == [10, 20]', 'ask should wait 10 seconds, then 20: twice as long each time. The second blank multiplies.']]},
+   hint: 'The first blank is <code>not in</code>: stop when the code is <i>not</i> one worth retrying. The second blank is <code>*</code>, so the wait doubles.',
+   after: ['The call for C4 failed twice and worked on the third try. Each wait was twice as long as the one before, so a busy server has more time to recover.',
+           'This page skips the waiting. In a notebook, <code>time.sleep(10)</code> really waits 10 seconds.']},
+  {topic: 'Don\'t retry every error', stage: 'fail', pre: ASK,
+   intro: '<code>ask</code> from the last step is loaded. The box has a typo in the name of the model.',
+   task: 'Run the box and read the error. Did <code>ask</code> try again? Then fix the name of the model so that the call works.',
+   starter: 'GEMINI_MODEL = "gemini-3.5-flash-lit"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
+   answer: 'GEMINI_MODEL = "gemini-3.5-flash-lite"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
+   check: {exprs: ['answer']},
+   hint: 'The name ends in <code>lite</code>: <code>"gemini-3.5-flash-lite"</code>.',
+   after: 'A 404 is about the request, so <code>ask</code> stopped at once instead of waiting. Retrying would have given the same 404.'},
+  {topic: 'Save each answer as it arrives', stage: 'fail', pre: ASK + '\n_sim.plan({"C5": ["drop"]})',
+   intro: ['If a loop stops halfway, the answers it has only in memory are lost. So save each answer to a file as soon as it arrives. Then a second run can skip the comments that are already in the file.',
+           '<code>mode="a"</code> adds a line to the end of a file instead of replacing it. In this step the connection drops during C5. <code>ask</code> is loaded.'],
+   task: 'Fill in the two blanks. The first skips a comment when its ID is already in <code>done</code>. The second makes <code>to_csv</code> add to the file. The box runs the loop, catches the dropped connection, and runs the loop again.',
+   starter: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id ____ done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="____", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
+   answer: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="a", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
+   errorHints: [['KeyError: .document_id.', 'labels.csv has lost its first line, with the column names. With mode="w", each answer replaces the file instead of adding to it.'],
+                 ['FileNotFoundError', 'labels.csv was never made, because the loop skipped every comment. Skip a comment only when its ID is in done.']],
+   check: {truths: [['len(pd.read_csv(path)) == 6', 'labels.csv should have six rows, one for each comment. With mode="w", each answer replaces the file instead of adding to it.'],
+                    ['pd.read_csv(path)["document_id"].is_unique', 'A comment is in labels.csv more than once. The second run should skip the comments in done.'],
+                    ['_sim.calls() == 7', 'The second run asked Gemini again about comments that were already saved. Skip a comment when its ID is in done.']]},
+   hint: 'The first blank is <code>in</code>. The second is <code>a</code>, for add.',
+   after: 'The first run saved C1 to C4 and stopped at C5. The second run skipped those four and asked only about C5 and C6: seven calls in all, and nothing was lost.'},
+  {topic: 'Write down what ran', stage: 'record', pre: LOOP,
+   intro: 'The same codebook can give other labels with another model, other settings or on another day. So save that information with the labels. <code>results</code> from step 6 is loaded.',
+   task: 'Fill in the two blanks: the name of the model, and today\'s date as text such as <code>2026-10-19</code>.',
+   starter: 'results["model"] = ____\nresults["codebook"] = "v1"\nresults["date"] = date.today().____()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
+   answer: 'results["model"] = GEMINI_MODEL\nresults["codebook"] = "v1"\nresults["date"] = date.today().isoformat()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
+   check: {exprs: ['results'], ordered: true, names: true},
+   hint: 'The first blank is <code>GEMINI_MODEL</code>. The second is <code>isoformat</code>.',
+   after: 'In Lab 7 you send these calls to the real Gemini, with your own key.'}
+];
+
 const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
-let D = null;
-const mine = {};          // my labels, by comment id
-let saved = false;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const STORE = 'compss211a-week07-gemini-workspace-1';
+let current = 0;
+const solved = new Set();
+// tried: steps where a checked answer was wrong. An answer can be opened once the student has tried.
+const tried = new Set();
 
-function codebookHTML(version, mark) {
-  return Object.entries(D.definitions[version]).map(([label, text]) => {
-    const body = mark && label === "unclear" ? esc(text).replace(/(, or it says both people were in the wrong)/, "<mark>$1</mark>") : esc(text);
-    return `<dt>${esc(label)}</dt><dd>${body}</dd>`;
-  }).join("");
-}
-const parse = reply => JSON.parse(reply.text);
-// How Python prints a dictionary of strings: single quotes, unless the text holds one.
-const pyStr = t => t.includes("'") && !t.includes('"') ? `"${t}"` : `'${t.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
-const pyDict = obj => "{" + Object.entries(obj).map(([k, v]) => `${pyStr(k)}: ${pyStr(String(v))}`).join(", ") + "}";
-const byComment = list => Object.fromEntries(list.map(r => [r.comment, r]));
-const textOf = id => D.comments.find(c => c.id === id).text;
+// ---------- Python ----------
+// The comparison code is the one the practice site uses for its code drills.
+const HELPERS = `
+import ast, json, math, numbers, sys, traceback
+import pandas as pd
 
-/* 1 · hand labels */
-function renderHand() {
-  $("post").textContent = D.post;
-  $("codebook1").innerHTML = codebookHTML("v1");
-  $("handForm").innerHTML = D.comments.map(c => `
-    <fieldset class="item">
-      <legend><b>${c.id}</b>${esc(c.text)}</legend>
-      <div class="pills">${D.labels.map(l => `<label class="pill"><input type="radio" name="hand-${c.id}" value="${l}"><span>${l}</span></label>`).join("")}</div>
-    </fieldset>`).join("");
-}
-$("saveLabels").addEventListener("click", () => {
-  const missing = [];
-  for (const c of D.comments) {
-    const pick = document.querySelector(`input[name="hand-${c.id}"]:checked`);
-    if (pick) mine[c.id] = pick.value; else missing.push(c.id);
+_WS_NL = chr(10)
+
+def _ws_pretty(value, indent=0):
+    # A short value stays on one line. A long dictionary or list gets one item per line, so its levels are visible.
+    flat = repr(value)
+    if not isinstance(value, (dict, list, tuple)) or len(flat) <= 88 - indent:
+        return flat
+    pad, inner = " " * indent, " " * (indent + 2)
+    if isinstance(value, dict):
+        items = [f"{inner}{key!r}: {_ws_pretty(item, indent + 2)}" for key, item in value.items()]
+        return "{" + _WS_NL + ("," + _WS_NL).join(items) + _WS_NL + pad + "}"
+    first, last = ("[", "]") if isinstance(value, list) else ("(", ")")
+    items = [inner + _ws_pretty(item, indent + 2) for item in value]
+    return first + _WS_NL + ("," + _WS_NL).join(items) + _WS_NL + pad + last
+
+def _ws_show(value):
+    if value is not None:
+        print(_ws_pretty(value))
+
+def _ws_run(code, namespace):
+    """Run a box of code as a notebook cell would: the value of the last line is shown."""
+    try:
+        tree = ast.parse(code, "<your code>")
+        last = None
+        if tree.body and isinstance(tree.body[-1], ast.Expr):
+            last = ast.Expression(tree.body.pop().value)
+        exec(compile(tree, "<your code>", "exec"), namespace)
+        if last is not None:
+            _ws_show(eval(compile(last, "<your code>", "eval"), namespace))
+        return True
+    except BaseException:
+        et, ev, tb = sys.exc_info()
+        frames = [f for f in traceback.extract_tb(tb) if f.filename == "<your code>"]
+        if frames:
+            print("Traceback (most recent call last):", file=sys.stderr)
+            print("".join(traceback.format_list(frames)), end="", file=sys.stderr)
+        print("".join(traceback.format_exception_only(et, ev)), end="", file=sys.stderr)
+        return False
+
+def _ws_norm(x):
+    plain = lambda obj: obj.index.name is None and not isinstance(obj.index, pd.MultiIndex) and pd.api.types.is_integer_dtype(obj.index.dtype)
+    if isinstance(x, pd.Series):
+        return x.reset_index(drop=True).to_frame() if plain(x) else x.reset_index()
+    if isinstance(x, pd.DataFrame):
+        return x.reset_index(drop=True) if plain(x) else x.reset_index()
+    return x
+
+def _ws_same(a, b):
+    try:
+        if pd.isna(a) and pd.isna(b):
+            return True
+    except (TypeError, ValueError):
+        pass
+    if isinstance(a, numbers.Number) and isinstance(b, numbers.Number) and not isinstance(a, bool) and not isinstance(b, bool):
+        try:
+            return math.isclose(float(a), float(b), rel_tol=1e-6, abs_tol=1e-9)
+        except (TypeError, ValueError):
+            return False
+    try:
+        return bool(a == b)
+    except Exception:
+        return False
+
+def _ws_short(value):
+    text = repr(value)
+    return text if len(text) <= 80 else text[:77] + "..."
+
+def _ws_compare(label, got, exp, ordered, names):
+    if isinstance(exp, (pd.DataFrame, pd.Series)):
+        if not isinstance(got, (pd.DataFrame, pd.Series)):
+            return f"{label} should be a pandas table, but it is a {type(got).__name__}."
+        g, e = _ws_norm(got), _ws_norm(exp)
+        if names and isinstance(exp, pd.DataFrame):
+            by_name = {str(c): c for c in g.columns}
+            wanted = [str(c) for c in e.columns]
+            missing = [c for c in wanted if c not in by_name]
+            extra = [c for c in by_name if c not in wanted]
+            if missing or extra:
+                parts = []
+                if missing:
+                    parts.append("missing: " + ", ".join(missing))
+                if extra:
+                    parts.append("not needed: " + ", ".join(extra))
+                return f"{label} has the wrong columns ({'; '.join(parts)})."
+            g = g[[by_name[c] for c in wanted]]
+        if g.shape[1] != e.shape[1]:
+            return f"{label} has {g.shape[1]} column(s); the answer has {e.shape[1]}."
+        if len(g) != len(e):
+            return f"{label} has {len(g)} row(s); the answer has {len(e)}."
+        rows = lambda frame: [list(row) for row in frame.astype(object).itertuples(index=False)]
+        gr, er = rows(g), rows(e)
+        match = lambda A, B: all(all(_ws_same(p, q) for p, q in zip(x, y)) for x, y in zip(A, B))
+        if match(gr, er):
+            return ""
+        key = lambda row: [str(v) for v in row]
+        if match(sorted(gr, key=key), sorted(er, key=key)):
+            return "" if not ordered else f"{label} has the right rows, but in a different order."
+        return f"{label} has the right shape, but some values are different. Compare your output with the task."
+    if got is Ellipsis:
+        return f"{label} is still ... (the placeholder). Replace the ... with your answer."
+    if got is None and exp is not None:
+        return f"{label} is None."
+    if isinstance(exp, (list, tuple)):
+        if not isinstance(got, (list, tuple)):
+            return f"{label} should be a list, but it is a {type(got).__name__}."
+        if len(got) != len(exp):
+            return f"{label} has {len(got)} item(s); the answer has {len(exp)}."
+        if not all(_ws_same(a, b) for a, b in zip(got, exp)):
+            return f"{label} has the right number of items, but some are different."
+        return ""
+    if not _ws_same(got, exp):
+        return f"{label} is {_ws_short(got)}, which isn't right yet."
+    return ""
+
+def _ws_check(user_ns, model_ns, spec_json):
+    spec = json.loads(spec_json)
+    for expr in spec["exprs"]:
+        expected = eval(expr, model_ns)
+        try:
+            got = eval(expr, user_ns)
+        except NameError as error:
+            return f"{error.name} doesn't exist yet. Check the spelling, and that your code makes it."
+        except Exception as error:
+            return f"Checking {expr} gave an error: {type(error).__name__}: {error}"
+        label = spec.get("labels", {}).get(expr, expr)
+        for wrapper in ("list(", "str("):
+            if expr.startswith(wrapper) and expr.endswith(")") and expr[len(wrapper):-1].isidentifier():
+                label = expr[len(wrapper):-1]
+        message = _ws_compare(label, got, expected, spec.get("ordered", True), spec.get("names", False))
+        if message:
+            return message
+    return ""
+
+def _ws_truths(user_ns, spec_json):
+    for expr, message in json.loads(spec_json):
+        try:
+            ok = bool(eval(expr, user_ns))
+        except NameError as error:
+            return f"{error.name} doesn't exist yet. Check the spelling, and that your code makes it."
+        except Exception as error:
+            return f"Checking the result gave an error: {type(error).__name__}: {error}"
+        if not ok:
+            return message
+    return ""
+
+
+# ---------- The simulated Gemini ----------
+# A module called google.genai with the names the real package has: genai.Client, types.GenerateContentConfig,
+# errors.APIError. It answers from the responses recorded in gemini_responses.json and sends nothing.
+import time as _ws_time
+from types import ModuleType as _WsModule
+
+_WS_ROOT = "${ROOT}"
+_SIM = {"data": None, "calls": 0, "waits": [], "plan": {}, "repeat": {}, "repeat_mode": False, "last": None}
+
+def _sim_data():
+    if _SIM["data"] is None:
+        with open(_WS_ROOT + "/gemini_responses.json") as f:
+            _SIM["data"] = json.load(f)
+    return _SIM["data"]
+
+class APIError(Exception):
+    def __init__(self, code, status, message):
+        self.code, self.status, self.message = code, status, message
+        super().__init__(f"{code} {status}. {{'error': {{'code': {code}, 'message': '{message}', 'status': '{status}'}}}}")
+
+class ClientError(APIError):
+    pass
+
+class ServerError(APIError):
+    pass
+
+def _sim_failure(kind):
+    if kind == "503":
+        return ServerError(503, "UNAVAILABLE", "The model is overloaded. Please try again later.")
+    if kind == "429":
+        return ClientError(429, "RESOURCE_EXHAUSTED", "You exceeded your current quota of requests per minute.")
+    return ConnectionError("The connection dropped before Gemini answered.")
+
+class GenerateContentConfig:
+    _fields = ("system_instruction", "response_mime_type", "response_schema", "temperature")
+    def __init__(self, **settings):
+        for name in settings:
+            if name not in self._fields:
+                raise TypeError(f"GenerateContentConfig has no setting called {name}. This page knows: {', '.join(self._fields)}.")
+        for name in self._fields:
+            setattr(self, name, settings.get(name))
+    def __repr__(self):
+        shown = ", ".join(f"{name}={getattr(self, name)!r}" for name in self._fields if getattr(self, name) is not None)
+        return f"GenerateContentConfig({shown})"
+
+class GenerateContentResponseUsageMetadata:
+    def __init__(self, usage):
+        self.prompt_token_count = usage["prompt_token_count"]
+        self.candidates_token_count = usage["candidates_token_count"]
+        self.total_token_count = usage["total_token_count"]
+    def __repr__(self):
+        return (f"GenerateContentResponseUsageMetadata(candidates_token_count={self.candidates_token_count}, "
+                f"prompt_token_count={self.prompt_token_count}, total_token_count={self.total_token_count})")
+
+class Candidate:
+    def __init__(self, finish_reason):
+        self.finish_reason = finish_reason
+    def __repr__(self):
+        return f"Candidate(finish_reason={self.finish_reason!r})"
+
+class GenerateContentResponse:
+    def __init__(self, text, usage, finish_reason):
+        self.text = text
+        self.usage_metadata = GenerateContentResponseUsageMetadata(usage)
+        self.candidates = [Candidate(finish_reason)]
+    def __repr__(self):
+        return "GenerateContentResponse(...): print response.text to see the answer."
+
+def _sim_usage(prompt_tokens, answer):
+    out = max(1, len(answer) // 4)
+    return {"prompt_token_count": prompt_tokens, "candidates_token_count": out, "total_token_count": prompt_tokens + out}
+
+class _Models:
+    def generate_content(self, *, model, contents, config=None):
+        _SIM["calls"] += 1
+        data = _sim_data()
+        if model != data["model"]:
+            raise ClientError(404, "NOT_FOUND", f"models/{model} is not found for API version v1beta, or is not supported for generateContent.")
+        if not isinstance(contents, str):
+            raise TypeError("contents should be the prompt, as text.")
+        if config is not None and not isinstance(config, GenerateContentConfig):
+            raise TypeError("config should be made with types.GenerateContentConfig(...).")
+        comment = next((c["id"] for c in data["comments"] if c["text"] in contents), None)
+        planned = _SIM["plan"].get(comment)
+        if planned:
+            raise _sim_failure(planned.pop(0))
+        system = config.system_instruction if config else None
+        wants_json = bool(config and config.response_mime_type == "application/json" and config.response_schema is not None)
+        _SIM["last"] = {"comment": comment, "system": system, "json": wants_json, "temperature": config.temperature if config else None}
+        if comment is None:
+            text = "The simulated Gemini only answers prompts that contain one of the six comments. Fill the template with a comment from comments."
+            return GenerateContentResponse(text, _sim_usage(len(contents) // 4 + 1, text), "STOP")
+        if system is None:
+            text = "Which labels should I use? Your prompt asks me to label the comment, but it does not say what the labels are or what they mean."
+            return GenerateContentResponse(text, _sim_usage(len(contents) // 4 + 1, text), "STOP")
+        version = "v2" if system == data["system"]["v2"] else "v1"
+        record = next(r for r in data["runs"][version] if r["comment"] == comment)
+        repeat = data["runs"]["repeat"]
+        if _SIM["repeat_mode"] and comment == repeat["comment"]:
+            kind = "zero" if config.temperature == 0 else "default"
+            n = _SIM["repeat"].get(kind, 0)
+            record = repeat[kind][n % len(repeat[kind])]
+            _SIM["repeat"][kind] = n + 1
+        if wants_json:
+            text = record["text"]
+        else:
+            answer = json.loads(record["text"])
+            text = f"I would label this comment {answer['label']}. {answer['reason']}"
+        return GenerateContentResponse(text, record["usage"], record["finish_reason"])
+
+class Client:
+    def __init__(self, api_key=None, **options):
+        self.models = _Models()
+
+def _sim_reset():
+    _SIM.update(calls=0, waits=[], plan={}, repeat={}, repeat_mode=False, last=None)
+
+def _sim_plan(plan):
+    _SIM["plan"] = {comment: list(kinds) for comment, kinds in plan.items()}
+
+def _sim_repeat_mode(on):
+    _SIM["repeat_mode"] = bool(on)
+
+def _sim_sleep(seconds):
+    # The page does not wait. It notes how long the code asked to wait, so a step can check it.
+    _SIM["waits"].append(seconds)
+
+_ws_time.sleep = _sim_sleep
+
+_ws_google = _WsModule("google")
+_ws_genai = _WsModule("google.genai")
+_ws_types = _WsModule("google.genai.types")
+_ws_errors = _WsModule("google.genai.errors")
+_ws_genai.Client = Client
+_ws_types.GenerateContentConfig = GenerateContentConfig
+for _name, _value in (("APIError", APIError), ("ClientError", ClientError), ("ServerError", ServerError)):
+    setattr(_ws_errors, _name, _value)
+    _value.__module__ = "google.genai.errors"
+_ws_genai.types, _ws_genai.errors, _ws_google.genai = _ws_types, _ws_errors, _ws_genai
+_ws_course = _WsModule("compss_sim")
+_ws_course.data, _ws_course.reset, _ws_course.plan, _ws_course.repeat_mode = _sim_data, _sim_reset, _sim_plan, _sim_repeat_mode
+_ws_course.calls = lambda: _SIM["calls"]
+_ws_course.waits = lambda: list(_SIM["waits"])
+_ws_course.last = lambda: _SIM["last"]
+sys.modules.update({"google": _ws_google, "google.genai": _ws_genai, "google.genai.types": _ws_types,
+                    "google.genai.errors": _ws_errors, "compss_sim": _ws_course})
+`;
+
+let pythonReady = null, helpersLoaded = false;
+const setEngine = (text, kind) => { $('engineStatus').className = 'status' + (kind ? ' ' + kind : ''); $('engineStatus').textContent = text; };
+async function getPython() {
+  const py = await Sandbox.runtime(['pandas'], text => setEngine(text));
+  if (!helpersLoaded) {
+    Sandbox.writeFiles(py.FS, ROOT, FILES);
+    py.runPython(HELPERS);
+    helpersLoaded = true;
   }
-  if (missing.length) {
-    $("saveMsg").className = "msg bad";
-    $("saveMsg").textContent = `Give every comment a label first. Still missing: ${missing.join(", ")}.`;
+  py.FS.chdir(ROOT);
+  setEngine('', 'ready');
+  return py;
+}
+// A fresh set of variables: the setup, your labels from step 1 if the step uses them, then anything the step loads.
+function freshNamespace(py, step) {
+  const ns = py.toPy({'__name__': '__main__'});
+  const run = py.globals.get('_ws_run');
+  run(SETUP, ns);
+  if (step && step.needsLabels) run($('s0-code').value, ns);
+  if (step && step.pre) run(step.pre, ns);
+  return ns;
+}
+const LIMIT = 12000;   // characters of output shown
+// Run code and collect what it prints. Returns {ok, html, ns, py}; the caller destroys ns.
+async function execute(code, step) {
+  const py = await getPython();
+  const ns = freshNamespace(py, step);
+  let html = '', shown = 0, cut = false;
+  const sink = (text, kind) => {
+    if (shown >= LIMIT) { cut = true; return; }
+    const part = text.slice(0, LIMIT - shown);
+    shown += part.length;
+    if (part.length < text.length) cut = true;
+    html += kind === 'err' ? `<span class="err">${esc(part)}</span>` : esc(part);
+  };
+  const ok = await Sandbox.capture(() => py.globals.get('_ws_run')(code, ns), sink);
+  if (cut) html += '\n<span class="dim">The output is longer than this box shows. Print a smaller part.</span>';
+  if (!html) html = '<span class="dim">(no output)</span>';
+  return {ok, html, ns, py};
+}
+// What a common error message means, in a sentence. The Python message stays above it.
+function explainError(html) {
+  const text = html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim().split('\n').pop() || '';
+  let m;
+  if (/ServerError: 503/.test(text)) return 'Gemini answered 503: the server is busy. That is temporary, so the same call can work if you wait and try again.';
+  if (/ClientError: 429/.test(text)) return 'Gemini answered 429: too many calls in one minute. Wait and try again.';
+  if (/ClientError: 404/.test(text)) return 'Gemini answered 404: there is no model with that name. Check the spelling of GEMINI_MODEL.';
+  if (/^ConnectionError/.test(text)) return 'The connection dropped before Gemini answered.';
+  if ((m = text.match(/^KeyError: (.+)$/))) return `There is no key ${m[1]} here. Print the dictionary to see its keys.`;
+  if (/JSONDecodeError/.test(text)) return 'response.text is not JSON, so json.loads cannot read it. Ask for JSON in the settings: response_mime_type and response_schema.';
+  if (/^TypeError: string indices must be integers/.test(text)) return 'This value is text, not a dictionary. Turn the text into a dictionary with json.loads first.';
+  if ((m = text.match(/^NameError: name '(.+)' is not defined/))) return `Python does not know the name ${m[1]}. Check the spelling, and that an earlier line in this box makes it. Each run starts fresh.`;
+  if ((m = text.match(/^AttributeError: '(.+)' object has no attribute '(.+)'/))) return `A ${m[1]} has nothing called ${m[2]}. Check the spelling of what comes after the dot.`;
+  if (/^SyntaxError|^IndentationError/.test(text)) return 'Python could not read the code. Look at the line the message points to for a missing bracket, quotation mark or colon, or uneven indentation.';
+  return '';
+}
+
+function setFeedback(el, kind, html) { el.className = `feedback show ${kind}`; el.innerHTML = html; }
+
+// ---------- The page ----------
+function renderSteps() {
+  $('steps').innerHTML = STEPS.map((s, i) => {
+    const example = s.example ? `<div class="example"><div class="label">Example</div><pre>${esc(s.example)}</pre></div>
+      <p><button data-act="example" data-q="${i}" disabled>Run the example</button></p><pre class="out" id="s${i}-example"></pre>` : '';
+    const work = `<h4>Your turn</h4><p class="task">${s.task}</p>
+      <label class="small" for="s${i}-code">Your code</label>
+      <textarea id="s${i}-code" spellcheck="false" autocomplete="off" rows="${Math.max(6, (s.scaffold || s.starter).split('\n').length + 1)}">${esc(s.starter)}</textarea>
+      <div class="actions">
+        <button data-act="run" data-q="${i}" disabled>Run</button>
+        <button class="primary" data-act="check" data-q="${i}" id="s${i}-check" disabled>Check answer</button>
+        <button data-next id="s${i}-next">Next step</button>
+        <span class="small">Ctrl or ⌘ + Enter runs the code.</span>
+      </div>
+      <div class="feedback" id="s${i}-fb" aria-live="polite"></div>
+      <pre class="out" id="s${i}-out"></pre>
+      <details><summary>Hint</summary><div><p>${s.hint}</p></div>${s.scaffold ? `<p><button data-scaffold="${i}">Put a starting point in the box</button></p>` : ''}</details>
+      <details id="s${i}-answer" hidden><summary>One possible answer</summary><pre class="answer">${esc(s.answer)}</pre></details>
+      <p class="small" id="s${i}-answer-wait">One possible answer appears here after you have checked an answer of your own.</p>`;
+    return `<section class="q" id="s${i}" aria-labelledby="s${i}-title" hidden>
+      <div class="level">Step ${i + 1} of ${STEPS.length}</div>
+      <h2 id="s${i}-title" tabindex="-1">${esc(s.topic)}</h2>
+      ${[].concat(s.intro || []).map(text => `<p>${text}</p>`).join('')}
+      ${example}
+      ${work}
+    </section>`;
+  }).join('');
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({current, solved: [...solved], tried: [...tried], scratch: $('scratch').value, code: STEPS.map((s, i) => $(`s${i}-code`).value)}));
+  } catch (error) { /* storage is unavailable; the page works without it */ }
+}
+function restore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (!saved || !Array.isArray(saved.code)) return;
+    if (saved.code.length !== STEPS.length) return;
+    saved.code.forEach((text, i) => { if (typeof text === 'string') $(`s${i}-code`).value = text; });
+    for (const [name, set] of [['solved', solved], ['tried', tried]])
+      (saved[name] || []).forEach(i => { if (Number.isInteger(i) && i >= 0 && i < STEPS.length) set.add(i); });
+    if (typeof saved.scratch === 'string') $('scratch').value = saved.scratch;
+    if (Number.isInteger(saved.current)) current = saved.current;
+  } catch (error) { /* ignore unreadable saved state */ }
+}
+
+// One step is visible at a time. The others stay in the page, so their code is kept.
+function show(i, focus = true) {
+  current = Math.max(0, Math.min(STEPS.length - 1, i));
+  STEPS.forEach((_, n) => { $(`s${n}`).hidden = n !== current; });
+  $('picker').innerHTML = STEPS.map((s, n) => `<option value="${n}"${n === current ? ' selected' : ''}>${n + 1}. ${esc(s.topic)}${solved.has(n) ? ' ✓' : ''}</option>`).join('');
+  $('prev').disabled = current === 0;
+  $('next').disabled = current === STEPS.length - 1;
+  STEPS.forEach((s, n) => {
+    $(`s${n}-check`).classList.toggle('primary', !solved.has(n));
+    $(`s${n}-next`).classList.toggle('primary', solved.has(n));
+    const open = tried.has(n) || solved.has(n);
+    $(`s${n}-answer`).hidden = !open;
+    $(`s${n}-answer-wait`).hidden = open;
+  });
+  // The strip above the step: which part of the work this step belongs to.
+  const stages = [...$('stages').children], at = stages.findIndex(li => li.dataset.stage === STEPS[current].stage);
+  stages.forEach((li, n) => { li.classList.toggle('done', n < at); if (n === at) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); });
+  $('progress').textContent = `${STEPS.filter((s, n) => solved.has(n)).length} of ${STEPS.length} checked`;
+  if (focus) $(`s${current}-title`).focus();
+  save();
+}
+
+// The side panel: the post, the codebook and the comments, from the recorded file.
+function renderReference() {
+  $('post').innerHTML = `<b>The post:</b> ${esc(DATA.post)}`;
+  $('codebook').innerHTML = Object.entries(DATA.definitions.v1).map(([label, text]) => `<dt>${esc(label)}</dt><dd>${esc(text)}</dd>`).join('');
+  $('commentList').innerHTML = DATA.comments.map(c => `<li><b>${esc(c.id)}</b>${esc(c.text)}</li>`).join('');
+}
+
+// Clicking a name in the side panel puts it into the code box that was used last: in the next blank if there is one,
+// otherwise at the cursor.
+let lastBox = null;
+for (const type of ['focusin', 'pointerdown', 'input']) document.addEventListener(type, e => { if (e.target.matches && e.target.matches('textarea')) lastBox = e.target; });
+function insertText(text) {
+  const box = lastBox && lastBox.offsetParent !== null ? lastBox : $(`s${current}-code`);
+  if (!box) return;
+  const blank = box.value.indexOf('____');
+  if (blank !== -1) box.setRangeText(text, blank, blank + 4, 'end');
+  else box.setRangeText(text, box.selectionStart, box.selectionEnd, 'end');
+  box.dispatchEvent(new Event('input', {bubbles: true}));
+  box.focus();
+}
+
+let busy = false;
+async function runBox(button) {
+  if (busy) return;
+  const act = button.dataset.act;
+  const i = Number(button.dataset.q), s = STEPS[i];
+  const box = act === 'scratch' ? $('scratch') : act === 'example' ? null : $(`s${i}-code`);
+  const out = act === 'scratch' ? $('scratch-out') : act === 'example' ? $(`s${i}-example`) : $(`s${i}-out`);
+  const fb = act === 'run' || act === 'check' ? $(`s${i}-fb`) : null;
+  const code = act === 'example' ? s.example : box.value;
+  if (fb && code.includes('____')) { setFeedback(fb, 'bad', 'Replace every <code>____</code> first.'); out.innerHTML = ''; return; }
+  if (fb && !code.trim()) { setFeedback(fb, 'bad', 'Write some code first.'); out.innerHTML = ''; return; }
+  if (fb && s.needsLabels && !solved.has(0)) { setFeedback(fb, 'bad', 'This step uses your labels from step 1. Fill them in and check them there first.'); out.innerHTML = ''; return; }
+  if (!code.trim()) return;
+  busy = true;
+  button.disabled = true;
+  let result = null, model = null;
+  try {
+    result = await execute(code, act === 'scratch' ? null : s);
+    const hint = !result.ok && s && (s.errorHints || []).find(([pattern]) => new RegExp(pattern).test(result.html));
+    const plain = result.ok ? '' : hint ? hint[1] : explainError(result.html);
+    out.innerHTML = result.html;
+    if (act !== 'run' && act !== 'check') return;
+    if (act === 'run') {
+      if (plain) setFeedback(fb, 'bad', esc(plain)); else fb.className = 'feedback';
+      save();
+      return;
+    }
+    let message;
+    if (!result.ok) message = 'Your code stopped with an error. ' + (plain || 'The last line of the message below says what went wrong.');
+    else if (s.check.truths) message = result.py.globals.get('_ws_truths')(result.ns, JSON.stringify(s.check.truths));
+    else {
+      model = await execute(s.answer, s);
+      message = result.py.globals.get('_ws_check')(result.ns, model.ns, JSON.stringify(s.check));
+    }
+    if (!message) {
+      solved.add(i);
+      setFeedback(fb, 'good', `<p><strong>Correct.</strong></p>${[].concat(s.after || []).map(text => `<p>${text}</p>`).join('')}`);
+    } else {
+      tried.add(i);
+      setFeedback(fb, 'bad', esc(message));
+    }
+    show(current, false);
+  } catch (error) {
+    const text = error && error.message ? error.message : String(error);
+    if (fb) setFeedback(fb, 'bad', esc(/load|fetch|network|internet/i.test(text) ? 'Python could not load. This page needs an internet connection. Reload when you are online.' : text));
+    else out.innerHTML = `<span class="err">${esc(text)}</span>`;
+  } finally {
+    for (const r of [result, model]) if (r && r.ns) r.ns.destroy();
+    busy = false;
+    button.disabled = false;
+  }
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-next]')) { show(current + 1); return; }
+  const name = e.target.closest('[data-name]');
+  if (name) { insertText(name.dataset.name); return; }
+  const scaffold = e.target.closest('[data-scaffold]');
+  if (scaffold) {
+    const i = Number(scaffold.dataset.scaffold), box = $(`s${i}-code`);
+    if (box.value.trim() && box.value.trim() !== STEPS[i].starter.trim() && !window.confirm('Replace what is in the box with a starting point?')) return;
+    box.value = STEPS[i].scaffold;
+    box.dispatchEvent(new Event('input', {bubbles: true}));
+    box.focus();
     return;
   }
-  saved = true;
-  document.querySelectorAll("#handForm input").forEach(i => { i.disabled = true; });
-  $("saveLabels").disabled = true;
-  $("saveMsg").className = "msg";
-  $("saveMsg").textContent = "Saved. You compare them with the model's labels in step 3.";
-  $("sendAllMsg").textContent = "";
+  const button = e.target.closest('button[data-act]');
+  if (button) runBox(button);
 });
-
-/* 2 · one call */
-function renderCall() {
-  const first = D.comments[0];
-  $("callCode").innerHTML =
-`<span class="k">prompt</span> = TEMPLATE.format(text=comments[<span class="n">0</span>])
-response = client.models.generate_content(
-    model=<span class="s">"${esc(D.model)}"</span>,
-    contents=<span class="k">prompt</span>,
-    config=types.GenerateContentConfig(
-        system_instruction=SYSTEM,
-        response_mime_type=<span class="s">"application/json"</span>,
-        response_schema=LABEL_SCHEMA,
-        temperature=<span class="n">0</span>,
-    ),
-)`;
-  const schema = `label: one of ${D.schema.properties.label.enum.join(", ")}\nreason: text\nboth are required`;
-  $("requestParts").innerHTML = [
-    ["Model", "which language model answers", D.model],
-    ["System instruction", "the same for every comment", D.system.v1],
-    ["Prompt", "the template, filled in with comment C1", D.template.replace("{text}", first.text)],
-    ["Schema", "the shape the answer must have", schema],
-    ["Temperature", "0: as little chance as possible", "0"],
-  ].map(([name, what, body]) => `<div class="part"><div class="label">${name} <span>${what}</span></div><pre>${esc(body)}</pre></div>`).join("");
-}
-$("checkP1").addEventListener("click", () => {
-  const pick = document.querySelector("input[name=p1]:checked"), v = $("v-p1");
-  if (!pick) { v.className = "verdict show bad"; v.textContent = "Pick an answer first."; return; }
-  const good = pick.value === "str";
-  v.className = "verdict show " + (good ? "good" : "bad");
-  v.textContent = good
-    ? "Right. The answer always comes back as text. The schema makes that text valid JSON, and json.loads turns it into a dictionary."
-    : "Not quite. The answer always comes back as text, even with a schema. The schema only makes the text valid JSON. You turn it into a dictionary with json.loads.";
+document.addEventListener('keydown', e => {
+  if (!e.target.matches || !e.target.matches('textarea')) return;
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    const button = e.target.id === 'scratch' ? document.querySelector('[data-act="scratch"]') : e.target.closest('.q').querySelector('[data-act="run"]');
+    if (button && !button.disabled) runBox(button);
+  } else if (e.key === 'Tab' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    // Tab indents, as in a code editor. Escape, then Tab, leaves the box.
+    if (e.target.dataset.leave) { delete e.target.dataset.leave; return; }
+    e.preventDefault();
+    e.target.setRangeText('    ', e.target.selectionStart, e.target.selectionEnd, 'end');
+    e.target.dispatchEvent(new Event('input', {bubbles: true}));
+  } else if (e.key === 'Escape') {
+    e.target.dataset.leave = '1';
+  } else if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+    // Enter keeps the indentation of the line above, and adds four spaces after a colon.
+    const box = e.target, start = box.selectionStart, before = box.value.slice(0, start);
+    const line = before.slice(before.lastIndexOf('\n') + 1);
+    const indent = line.match(/^[ \t]*/)[0] + (/:\s*$/.test(line) ? '    ' : '');
+    if (!indent) return;
+    e.preventDefault();
+    box.setRangeText('\n' + indent, start, box.selectionEnd, 'end');
+    box.dispatchEvent(new Event('input', {bubbles: true}));
+  }
 });
-$("sendOne").addEventListener("click", () => {
-  const reply = D.runs.v1[0], usage = reply.usage;
-  const usageText = Object.entries(usage).map(([k, n]) => `${k}: ${n}`).join("\n");
-  $("responseOne").innerHTML = `
-    <div class="parts">
-      <div class="part"><div class="label">response.text <span class="simtag">saved response</span></div><pre>${esc(reply.text)}</pre></div>
-      <div class="part"><div class="label">json.loads(response.text) <span>now a dictionary</span></div><pre>${esc(pyDict(parse(reply)))}</pre></div>
-      <div class="part"><div class="label">response.usage_metadata <span>tokens in and out</span></div><pre>${esc(usageText)}</pre></div>
-      <div class="part"><div class="label">finish reason <span>why the model stopped</span></div><pre>${esc(reply.finish_reason)}</pre></div>
-    </div>
-    <p class="section-note" style="margin:0">A <b>token</b> is a piece of a word. The prompt count includes the system instruction, which is sent again with every comment. The service charges by the token, so a long codebook costs more for every text you label. Some models also report <code class="inl">thoughts_token_count</code>: tokens spent reasoning before the answer, which are charged too. <code class="inl">STOP</code> means the model finished its answer. Another reason, such as running out of tokens, means the answer may be cut off.</p>`;
-  $("responseOne").hidden = false;
+document.addEventListener('input', e => { if (e.target.matches('textarea')) save(); });
+
+renderSteps();
+restore();
+$('picker').addEventListener('change', e => show(Number(e.target.value)));
+$('prev').addEventListener('click', () => show(current - 1));
+$('next').addEventListener('click', () => show(current + 1));
+$('reset').addEventListener('click', () => {
+  if (!window.confirm('Clear all your code and checks on this page?')) return;
+  try { localStorage.removeItem(STORE); } catch (error) { /* nothing was saved */ }
+  location.reload();
 });
+// On a narrow screen the side panel starts closed, so the step is visible first.
+if (window.matchMedia('(max-width: 860px)').matches) $('loadedBox').open = false;
+show(current, false);
 
-/* 3 · compare */
-function compareHTML(version, opts = {}) {
-  const runs = byComment(D.runs[version]), other = opts.against ? byComment(D.runs[opts.against]) : null;
-  let agree = 0;
-  const items = D.comments.map(c => {
-    const r = parse(runs[c.id]);
-    const same = mine[c.id] === r.label;
-    if (same) agree++;
-    const flipped = other && parse(other[c.id]).label !== r.label;
-    return `<li class="${flipped ? "flipped" : ""}">
-      <div class="text"><b>${c.id}</b>${esc(c.text)}</div>
-      <div class="row">
-        <span><span class="who">You:</span> <span class="lab">${esc(mine[c.id])}</span></span>
-        <span><span class="who">Gemini:</span> <span class="lab">${esc(r.label)}</span></span>
-        <span class="flag ${same ? "same" : "diff"}">${same ? "same" : "different"}</span>
-        ${flipped ? `<span class="flag">changed from version 1</span>` : ""}
-      </div>
-      <div class="why">Gemini's reason: ${esc(r.reason)}</div>
-    </li>`;
-  }).join("");
-  return `<p class="tally">You and Gemini give the same label to ${agree} of ${D.comments.length} comments.</p><ul class="compare">${items}</ul>`;
-}
-$("sendAll").addEventListener("click", () => {
-  if (!saved) { $("sendAllMsg").className = "msg bad"; $("sendAllMsg").textContent = "Save your own labels in step 1 first."; return; }
-  $("compareOut").innerHTML = compareHTML("v1") +
-    `<p class="section-note" style="margin:14px 0 0">Neither set of labels is the right answer. Where you differ, read the comment again. Either one of you misread it, or the codebook does not cover it.</p>`;
-  $("q2").hidden = false;
-  renderVersion("v1");
-});
-$("checkP2").addEventListener("click", () => {
-  const pick = document.querySelector("input[name=p2]:checked"), v = $("v-p2");
-  if (!pick) { v.className = "verdict show bad"; v.textContent = "Pick an answer first."; return; }
-  const good = pick.value === "d";
-  v.className = "verdict show " + (good ? "good" : "bad");
-  v.textContent = good
-    ? "Right. Version 1 has no rule for a comment that blames both people, so you and the model each had to guess. Step 4 adds that rule."
-    : "Read the definitions again. Each one assumes the comment blames one side. None says what to do when a comment blames both, so you and the model each had to guess. Step 4 adds that rule.";
-});
-
-/* 4 · versions */
-let version = "v1";
-function renderVersion(v) {
-  version = v;
-  document.querySelectorAll("[data-version]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.version === v)));
-  $("codebook2").innerHTML = codebookHTML(v, v === "v2");
-  if (!saved) { $("versionOut").innerHTML = `<p class="msg">Save your labels in step 1 to see the comparison here.</p>`; return; }
-  const changed = D.comments.filter(c => parse(byComment(D.runs.v1)[c.id]).label !== parse(byComment(D.runs.v2)[c.id]).label).map(c => c.id);
-  const note = changed.length
-    ? `The highlighted label changed because one definition changed. A set of labels depends on the codebook that made it, so write down which version you used.`
-    : `No label changed this time. Under version 1, Gemini already gave C3 <code class="inl">unclear</code>, so the new rule made no difference to its answer. Step 5 shows that its label for C3 can also change from one call to the next.`;
-  $("versionOut").innerHTML = compareHTML(v, v === "v2" ? {against: "v1"} : {}) +
-    (v === "v2" ? `<p class="section-note" style="margin:14px 0 0">${note}</p>` : "");
-}
-document.querySelectorAll("[data-version]").forEach(b => b.addEventListener("click", () => renderVersion(b.dataset.version)));
-
-/* 5 · repeat */
-document.querySelectorAll("[data-repeat]").forEach(b => b.addEventListener("click", () => {
-  const kind = b.dataset.repeat, rep = D.runs.repeat, runs = rep[kind];
-  const labels = runs.map(r => parse(r).label);
-  const distinct = new Set(labels).size;
-  $("repeatOut").innerHTML = `
-    <p class="section-note" style="margin:14px 0 6px"><b>${esc(rep.comment)}:</b> ${esc(textOf(rep.comment))}</p>
-    <ul class="runs">${runs.map((r, i) => `<li>Call ${i + 1}: <span class="lab">${esc(parse(r).label)}</span>. ${esc(parse(r).reason)}</li>`).join("")}</ul>
-    <p class="section-note" style="margin:12px 0 0">${distinct > 1
-      ? (kind === "default"
-          ? "The same call gave different labels. If you label a dataset once, a second run could give other counts."
-          : "Even with temperature 0, the label changed between calls. Temperature 0 makes answers more alike, but not identical. Save the model, the codebook version, the temperature and the date with your labels.")
-      : new Set(runs.map(r => parse(r).reason)).size > 1
-        ? "The label is the same three times. Read the reasons: the wording changes from call to call, so the answers are not identical."
-        : "All three calls gave the same answer this time. That does not promise the same answer on the next call. Try the other button."}</p>`;
-}));
-
-/* load */
-fetch("data/week07/gemini_responses.json")
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(data => {
-    D = data;
-    if (D.source !== "recorded") {
-      $("notice").innerHTML = `<b>Example responses.</b> ${esc(D.source_note)} The calls on Monday return real responses, which can differ.`;
-      $("notice").hidden = false;
+(async () => {
+  try {
+    for (const name of DATA_FILES) {
+      const response = await fetch('data/week07/' + name);
+      if (!response.ok) throw new Error('Could not load ' + name);
+      FILES[name] = await response.text();
     }
-    renderHand();
-    renderCall();
-    renderVersion("v1");
-  })
-  .catch(() => { $("loadError").hidden = false; });
+    DATA = JSON.parse(FILES['gemini_responses.json']);
+    renderReference();
+    setEngine('Starting Python in your browser…');
+    await getPython();
+    document.querySelectorAll('button[data-act]').forEach(b => { b.disabled = false; });
+  } catch (error) {
+    setEngine(/Could not load/.test(error.message) ? error.message + '. Reload the page.' : 'Python could not load. This page needs an internet connection. Reload when you are online.', 'error');
+  }
+})();
 </script>
 </body>
 </html>
