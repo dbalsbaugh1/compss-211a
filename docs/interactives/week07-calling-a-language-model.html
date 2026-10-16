@@ -113,26 +113,11 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 </div></header>
 
 <main class="wrap layout">
-<aside class="reference" aria-label="What is loaded">
-<details id="loadedBox" open><summary>Already loaded</summary>
-  <p class="small">Click a name to put it in your code.</p>
-  <h3><button type="button" class="name" data-name="comments">comments</button></h3>
-  <p class="small">The six comments: a dictionary from ID to text.</p>
-  <h3><button type="button" class="name" data-name="TEMPLATE">TEMPLATE</button></h3>
-  <p class="small">The prompt, with a <code>{text}</code> slot for one comment.</p>
-  <h3><button type="button" class="name" data-name="SYSTEM">SYSTEM</button></h3>
-  <p class="small">The system instruction: the task and the codebook.</p>
-  <h3><button type="button" class="name" data-name="LABELS">LABELS</button></h3>
-  <p class="small">The three labels, as a list.</p>
-  <h3><button type="button" class="name" data-name="LABEL_SCHEMA">LABEL_SCHEMA</button></h3>
-  <p class="small">The fields the answer must have.</p>
-  <h3><button type="button" class="name" data-name="CONFIG">CONFIG</button></h3>
-  <p class="small">The settings from step 5: <code>SYSTEM</code> and the schema.</p>
-  <h3><button type="button" class="name" data-name="GEMINI_MODEL">GEMINI_MODEL</button></h3>
-  <p class="small">The name of the model.</p>
-  <h3><button type="button" class="name" data-name="client">client</button></h3>
-  <p class="small">The connection to the simulated Gemini.</p>
-  <p class="small" style="margin-top:10px">Also loaded: <code>json</code>, <code>pd</code>, <code>time</code>, <code>Path</code>, <code>date</code>, and <code>types</code> and <code>errors</code> from <code>google.genai</code>.</p>
+<aside class="reference" aria-label="Variables you can use">
+<details id="loadedBox" open><summary>Variables you can use</summary>
+  <p class="small">Python variables made for you before this step. Type a name in your code, or click it. To see what one holds, print it.</p>
+  <div id="varList"></div>
+  <p class="small" style="margin-top:10px">Also imported: <code>json</code>, <code>pd</code>, <code>time</code>, <code>Path</code>, <code>date</code>, and <code>types</code> and <code>errors</code> from <code>google.genai</code>.</p>
 </details>
 <details id="codebookBox"><summary>The post and the codebook</summary>
   <p class="small" id="post">Loading…</p>
@@ -159,7 +144,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 </nav>
 <div id="steps"></div>
 <details class="scratch"><summary>Scratch code</summary>
-  <p class="small">Run any Python here. It does not change your answers. <code>client</code> is the simulated Gemini here too.</p>
+  <p class="small">Run any Python here. It does not change your answers. It has the variables made for every step, such as <code>comments</code> and <code>client</code>, but not the ones a single step adds.</p>
   <textarea id="scratch" spellcheck="false" autocomplete="off" aria-label="Scratch code">print(SYSTEM)</textarea>
   <div class="actions"><button data-act="scratch" disabled>Run</button></div>
   <pre class="out" id="scratch-out"></pre>
@@ -209,17 +194,31 @@ const PROMPT_C1 = 'prompt = TEMPLATE.format(text=comments["C1"])';
 const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
 const ASK = 'RETRY_CODES = {429, 503}\n\ndef ask(prompt):\n    wait = 10\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise\n            print("Error", error.code, "- waiting", wait, "seconds, then trying again")\n            time.sleep(wait)\n            wait = wait * 2';
 
+// The variables in the side panel. from: the first step (counted from 0) that has the variable.
+const VARIABLES = [
+  {name: 'comments', kind: 'dictionary', what: 'the six comments, from ID to text'},
+  {name: 'TEMPLATE', kind: 'text', what: 'the prompt, with a <code>{text}</code> slot for one comment'},
+  {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook'},
+  {name: 'LABELS', kind: 'list', what: 'the three labels'},
+  {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the fields the answer must have'},
+  {name: 'GEMINI_MODEL', kind: 'text', what: 'the name of the model'},
+  {name: 'client', kind: 'connection', what: 'sends calls to the simulated Gemini'},
+  {name: 'CONFIG', kind: 'settings', what: '<code>SYSTEM</code>, JSON and the schema, from step 5', from: 5},
+];
+
 // One entry per step.
 // starter: what the box starts with; scaffold: a starting point with blanks, offered in the hint.
 // answer: the model code. check.exprs: expressions compared after the student's code and after the model code.
 // check.truths: tests on the student's own result, for a step with more than one right answer.
 // errorHints: [pattern, message] pairs for errors that a wrong answer in this step causes.
+// vars: variables that pre makes, listed in the side panel as "From earlier steps".
 // pre: code run before the student's code. needsLabels: the step also runs the student's code from step 1.
 // example: code that is shown and can be run. after: shown once the answer is correct.
 // stage: where the step sits in Your labels, One call, JSON, Every comment, Failed calls, Record. intro and after can be a list of paragraphs.
 const STEPS = [
   {topic: 'Label the comments yourself', stage: 'yours',
-   intro: ['Researchers often label texts by hand. They read each text and give it a label from a <b>codebook</b>: a list of the labels and what each one means. A language model can do the same through an API.',
+   intro: ['Researchers often label texts by hand. They read each text and give it a label from a <b>codebook</b>: a list of the labels and what each one means. Language models can now do some of this labeling through an API. How well depends on the task, so researchers check a model\'s labels against their own before they trust them.',
+           'Here you code replies to a moral dispute: someone asks strangers online whether they were wrong. The codebook asks what each comment says about who was in the wrong, not who was really in the wrong. That is labeling, not judging.',
            'Open “The post and the codebook” and “The comments” in the side panel. Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.'],
    task: 'Replace each <code>____</code> with one label: <code>poster_at_fault</code>, <code>poster_not_at_fault</code> or <code>unclear</code>.',
    starter: 'my_labels = {\n    "C1": "____",\n    "C2": "____",\n    "C3": "____",\n    "C4": "____",\n    "C5": "____",\n    "C6": "____",\n}\nmy_labels',
@@ -230,7 +229,7 @@ const STEPS = [
    after: 'Step 7 puts your labels next to Gemini\'s.'},
   {topic: 'Fill in the template', stage: 'call',
    intro: ['You send the model a <b>prompt</b>: the text it answers. To label many comments, you write the prompt once as a <b>template</b>, with a slot for the comment, and fill the slot for each comment in turn.',
-           '<code>TEMPLATE</code> is loaded. Its slot is written <code>{text}</code>. <code>.format(text=...)</code> fills the slot and gives back new text.'],
+           'The slot in <code>TEMPLATE</code> is written <code>{text}</code>. <code>.format(text=...)</code> fills the slot and gives back new text.'],
    example: 'print(TEMPLATE)\nprint("---")\nprint("Hello, {name}!".format(name="Ana"))',
    task: 'Run the example. Then fill in the blank to make <code>prompt</code>: <code>TEMPLATE</code> with the slot filled with comment C1.',
    starter: 'prompt = TEMPLATE.____(text=comments["C1"])\nprint(prompt)',
@@ -239,8 +238,9 @@ const STEPS = [
    hint: 'The blank is <code>format</code>, as in the example.',
    after: 'In step 6, a loop fills the template with each comment in turn.'},
   {topic: 'Send one call', stage: 'call', pre: PROMPT_C1,
+   vars: [['prompt', 'text', 'the template filled with C1']],
    intro: ['<code>client.models.generate_content(...)</code> sends one call. It sends the name of the model, the prompt as <code>contents</code>, and settings as <code>config</code>. The answer is in <code>response.text</code>.',
-           'The <b>system instruction</b> goes in the settings. It holds the task and the codebook, and it is the same for every comment. The example sends the prompt without one. <code>prompt</code> from the last step is loaded.'],
+           'The <b>system instruction</b> goes in the settings. It holds the task and the codebook, and it is the same for every comment. The example sends the prompt without one.'],
    example: 'response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)\nprint(response.text)',
    task: 'Run the example. Then fill in the two blanks: the first is the name of the method that sends the call, and the second is the prompt. The call in the box sends <code>SYSTEM</code> as the system instruction.',
    starter: 'response = client.models.____(\n    model=GEMINI_MODEL,\n    contents=____,\n    config=types.GenerateContentConfig(system_instruction=SYSTEM),\n)\nprint(response.text)',
@@ -250,10 +250,11 @@ const STEPS = [
    hint: 'The first blank is <code>generate_content</code>. The second blank is <code>prompt</code>.',
    after: 'Without a system instruction, the model did not know which labels to use. With one, it answered with a label in its own words.'},
   {topic: 'Read the rest of the response', stage: 'call',
+   vars: [['prompt', 'text', 'the template filled with C1'], ['response', 'response', 'Gemini\'s answer to prompt, with SYSTEM']],
    pre: PROMPT_C1 + '\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=types.GenerateContentConfig(system_instruction=SYSTEM))',
    intro: ['A response has more than the text. <code>response.usage_metadata</code> counts the <b>tokens</b>: the pieces of words that went in and came out. <code>prompt_token_count</code> is the tokens in, and <code>candidates_token_count</code> is the tokens out.',
            'The system instruction is sent again with every call, so it is counted in every prompt. Services charge by the token.',
-           '<code>response.candidates[0].finish_reason</code> says why the model stopped. <code>STOP</code> means it finished its answer. <code>response</code> from the last step is loaded.'],
+           '<code>response.candidates[0].finish_reason</code> says why the model stopped. <code>STOP</code> means it finished its answer.'],
    example: 'print(response.usage_metadata)\nprint(response.candidates[0].finish_reason)',
    task: 'Run the example. Then fill in the blanks: <code>n_in</code> is the number of tokens in, and <code>n_out</code> is the number of tokens out.',
    starter: 'n_in = response.usage_metadata.____\nn_out = response.usage_metadata.____\nprint(n_in, n_out)',
@@ -262,7 +263,8 @@ const STEPS = [
    hint: 'The first blank is <code>prompt_token_count</code>. The second is <code>candidates_token_count</code>.',
    after: 'Most of the tokens in are the system instruction. A long codebook costs more for every text you label.'},
   {topic: 'Ask for JSON', stage: 'json', pre: PROMPT_C1,
-   intro: ['An answer in the model\'s own words is hard to put in a table. A <b>schema</b> lists the fields the answer must have and the labels it may use. <code>LABEL_SCHEMA</code> is loaded: click it in the side panel and run it in the scratch box to see it.',
+   vars: [['prompt', 'text', 'the template filled with C1']],
+   intro: ['An answer in the model\'s own words is hard to put in a table. A <b>schema</b> lists the fields the answer must have and the labels it may use. To see <code>LABEL_SCHEMA</code>, print it in the scratch box.',
            'Two settings ask for JSON: <code>response_mime_type="application/json"</code> and <code>response_schema=LABEL_SCHEMA</code>. The answer still comes back as text, in <code>response.text</code>. <code>json.loads</code> turns that text into a dictionary, as <code>response.json()</code> did in Week 6.'],
    task: 'Fill in the three blanks. The first passes the schema. The second turns the text into a dictionary. The third is the key that holds the label.',
    starter: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=____,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(type(response.text))\nprint(response.text)\n\nanswer = json.____(response.text)\nlabel = answer["____"]\nlabel',
@@ -279,7 +281,8 @@ const STEPS = [
    hint: 'The first blank is <code>text</code>, the loop variable that holds the comment. The second is <code>label</code>.',
    after: 'The loop sent six calls, one for each comment, and made one row from each answer.'},
   {topic: 'Compare with your labels', stage: 'all', needsLabels: true, pre: LOOP,
-   intro: '<code>results</code> from the last step and <code>my_labels</code> from step 1 are loaded. <code>.map(my_labels)</code> looks up each ID in your dictionary.',
+   vars: [['results', 'table', 'Gemini\'s labels from step 6'], ['my_labels', 'dictionary', 'your labels from step 1']],
+   intro: 'The side panel lists <code>results</code> from the last step and <code>my_labels</code> from step 1. <code>.map(my_labels)</code> looks up each ID in your dictionary.',
    task: 'Fill in the two blanks. The first adds your labels as a column. The second counts the rows where you and Gemini agree: <code>True</code> counts as 1.',
    starter: 'results["my_label"] = results["document_id"].map(____)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].____()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
    answer: 'results["my_label"] = results["document_id"].map(my_labels)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].sum()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
@@ -287,9 +290,10 @@ const STEPS = [
    hint: 'The first blank is <code>my_labels</code>. The second is <code>sum</code>.',
    after: ['Neither set of labels is the right answer. Where you differ, read the comment and Gemini\'s reason again. Either one of you misread it, or the codebook does not cover it.',
            'C3 blames both people. The codebook has no rule for that, so you and the model each had to guess.']},
-  {topic: 'Ask the same question again', stage: 'all', pre: '_sim.repeat_mode(True)\nprompt = TEMPLATE.format(text=comments["C3"])',
+  {topic: 'Ask the same question again', stage: 'all',
+   vars: [['prompt', 'text', 'the template filled with C3']], pre: '_sim.repeat_mode(True)\nprompt = TEMPLATE.format(text=comments["C3"])',
    intro: ['A language model picks each word with some chance. The <b>temperature</b> setting sets how much chance: 0 means as little as possible.',
-           'The box sends the same call for C3 three times with the default temperature, and three times with the temperature set to 0. <code>prompt</code> for C3 is loaded.'],
+           'The box sends the same call for C3 three times with the default temperature, and three times with the temperature set to 0.'],
    task: 'Fill in the two blanks: the temperature, and the settings that the second loop sends.',
    starter: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\n\nzero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=____,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=____)\n    labels_zero.append(json.loads(response.text)["label"])\n\nprint(labels_default)\nprint(labels_zero)',
    answer: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\n\nzero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=0,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    labels_zero.append(json.loads(response.text)["label"])\n\nprint(labels_default)\nprint(labels_zero)',
@@ -311,16 +315,18 @@ const STEPS = [
    after: ['The call for C4 failed twice and worked on the third try. Each wait was twice as long as the one before, so a busy server has more time to recover.',
            'This page skips the waiting. In a notebook, <code>time.sleep(10)</code> really waits 10 seconds.']},
   {topic: 'Don\'t retry every error', stage: 'fail', pre: ASK,
-   intro: '<code>ask</code> from the last step is loaded. The box has a typo in the name of the model.',
+   vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']],
+   intro: 'The side panel lists <code>ask</code> from the last step. The box has a typo in the name of the model.',
    task: 'Run the box and read the error. Did <code>ask</code> try again? Then fix the name of the model so that the call works.',
    starter: 'GEMINI_MODEL = "gemini-3.5-flash-lit"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
    answer: 'GEMINI_MODEL = "gemini-3.5-flash-lite"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
    check: {exprs: ['answer']},
    hint: 'The name ends in <code>lite</code>: <code>"gemini-3.5-flash-lite"</code>.',
    after: 'A 404 is about the request, so <code>ask</code> stopped at once instead of waiting. Retrying would have given the same 404.'},
-  {topic: 'Save each answer as it arrives', stage: 'fail', pre: ASK + '\n_sim.plan({"C5": ["drop"]})',
+  {topic: 'Save each answer as it arrives', stage: 'fail',
+   vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']], pre: ASK + '\n_sim.plan({"C5": ["drop"]})',
    intro: ['If a loop stops halfway, the answers it has only in memory are lost. So save each answer to a file as soon as it arrives. Then a second run can skip the comments that are already in the file.',
-           '<code>mode="a"</code> adds a line to the end of a file instead of replacing it. In this step the connection drops during C5. <code>ask</code> is loaded.'],
+           '<code>mode="a"</code> adds a line to the end of a file instead of replacing it. In this step the connection drops during C5.'],
    task: 'Fill in the two blanks. The first skips a comment when its ID is already in <code>done</code>. The second makes <code>to_csv</code> add to the file. The box runs the loop, catches the dropped connection, and runs the loop again.',
    starter: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id ____ done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="____", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
    answer: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="a", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
@@ -332,7 +338,8 @@ const STEPS = [
    hint: 'The first blank is <code>in</code>. The second is <code>a</code>, for add.',
    after: 'The first run saved C1 to C4 and stopped at C5. The second run skipped those four and asked only about C5 and C6: seven calls in all, and nothing was lost.'},
   {topic: 'Write down what ran', stage: 'record', pre: LOOP,
-   intro: 'The same codebook can give other labels with another model, other settings or on another day. So save that information with the labels. <code>results</code> from step 6 is loaded.',
+   vars: [['results', 'table', 'Gemini\'s labels from step 6']],
+   intro: 'The same codebook can give other labels with another model, other settings or on another day. So save that information with the labels.',
    task: 'Fill in the two blanks: the name of the model, and today\'s date as text such as <code>2026-10-19</code>.',
    starter: 'results["model"] = ____\nresults["codebook"] = "v1"\nresults["date"] = date.today().____()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
    answer: 'results["model"] = GEMINI_MODEL\nresults["codebook"] = "v1"\nresults["date"] = date.today().isoformat()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
@@ -773,8 +780,17 @@ function show(i, focus = true) {
   const stages = [...$('stages').children], at = stages.findIndex(li => li.dataset.stage === STEPS[current].stage);
   stages.forEach((li, n) => { li.classList.toggle('done', n < at); if (n === at) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); });
   $('progress').textContent = `${STEPS.filter((s, n) => solved.has(n)).length} of ${STEPS.length} checked`;
+  renderVariables();
   if (focus) $(`s${current}-title`).focus();
   save();
+}
+
+// The side panel: the variables of the current step.
+function renderVariables() {
+  const row = (name, kind, what) => `<h3><button type="button" class="name" data-name="${name}">${name}</button></h3><p class="small">${kind}: ${what}</p>`;
+  const always = VARIABLES.filter(v => (v.from || 0) <= current).map(v => row(v.name, v.kind, v.what)).join('');
+  const own = (STEPS[current].vars || []).map(([name, kind, what]) => row(name, kind, what)).join('');
+  $('varList').innerHTML = always + (own ? `<h4>From earlier steps</h4>${own}` : '');
 }
 
 // The side panel: the post, the codebook and the comments, from the recorded file.
