@@ -605,7 +605,7 @@ export const skills = [
     "weeks": "Week 9",
     "releaseWeek": 9,
     "activity": null,
-    "practice": "Lab 9 §§3–5 — Inspect neighbors and clusters, then change the number of clusters.",
+    "practice": "Lab 9 §§3–4 — Find the nearest abstracts, list their shared terms, and read them to judge the match. §5 (optional) groups the abstracts with KMeans.",
     "url": "https://github.com/macss-berkeley/compss-211a/blob/main/lab/lab09_openalex_embeddings.ipynb"
   },
   {

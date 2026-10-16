@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding similar documents · COMPSS 211A</title>
+<meta name="description" content="Turn eight short comments into TF-IDF rows, score every pair with cosine similarity, find the nearest documents to an anchor, and read the shared terms behind each score. KMeans is an optional last step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inter+Tight:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --berkeley:#002676; --ink:#1A1A1A; --paper:#FFFFFF; --card:#FFFFFF;
+  --gold:#FDBA12; --gold-soft:#FFF1CC; --blue-mid:#2A4D9B; --line:#DDDDDD;
+  --ok:#1E7D4E; --err:#B3403A; --code-bg:#0E1B45; --code-ink:#E8EDF6;
+  --c1:#2D6AA3; --c2:#C4820E; --c3:#6B4FA0; --c4:#1E7D4E;
+  --serif:"Inter Tight","Inter",-apple-system,"Segoe UI",sans-serif;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--sans);color:var(--ink);background:var(--paper);
+  line-height:1.6;font-size:16.5px;
+}
+.wrap{max-width:940px;margin:0 auto;padding:0 22px}
+header{padding:18px 0 0}
+.eyebrow{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:.78rem;color:var(--blue-mid)}
+h1{font-family:var(--serif);font-weight:600;color:var(--berkeley);font-size:clamp(2rem,5vw,2.9rem);line-height:1.12;margin:.35rem 0 .7rem;letter-spacing:-.01em}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin:.4rem 0 1rem}
+.chip{display:inline-flex;align-items:center;font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:3px}
+.chip-gold{background:var(--gold);color:var(--berkeley)}
+.chip-line{border:1.5px solid var(--line);color:#51607A;background:var(--card)}
+.lede{max-width:680px;color:#3A4A63;margin-bottom:1.3rem}
+.rule{height:3px;background:var(--gold);border:0;margin:0 0 36px;border-radius:2px}
+h2{font-family:var(--serif);font-weight:600;color:var(--berkeley);font-size:1.5rem;margin:0 0 .35rem}
+h2 .step{color:var(--gold);margin-right:.35rem}
+.section-note{color:#3A4A63;font-size:.95rem;margin-bottom:1rem;max-width:720px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px 24px;box-shadow:0 1px 2px rgba(18,35,61,.05);margin-bottom:34px}
+.card h3.sub{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-mid);margin:0 0 8px}
+.small{font-size:.85rem;color:#51607A}
+/* code */
+pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:.82rem;line-height:1.55;border-radius:4px;padding:12px 16px;overflow-x:auto;margin:14px 0 0}
+code.inl{font-family:var(--mono);font-size:.82em;background:#ECEFF5;border-radius:4px;padding:1px 6px;overflow-wrap:anywhere}
+/* document list */
+.doclist{list-style:none;display:flex;flex-direction:column;gap:6px}
+.doclist button{
+  width:100%;text-align:left;display:flex;gap:12px;align-items:baseline;
+  font-family:var(--sans);font-size:.92rem;color:var(--ink);line-height:1.45;
+  background:#FAFAFA;border:1.5px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer;
+}
+.doclist button:hover{border-color:var(--blue-mid)}
+.doclist button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.doclist button[aria-pressed=true]{border-color:var(--berkeley);background:#EEF3F9}
+.docid{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--berkeley);white-space:nowrap;min-width:3.6em}
+/* weight bars */
+.bars{display:grid;grid-template-columns:max-content 1fr max-content;gap:4px 10px;align-items:center;margin-top:6px;max-width:560px}
+.bars .t{font-family:var(--mono);font-size:.82rem;color:#2B3B57}
+.bars .b{height:10px;background:#E6EBF3;border-radius:2px;overflow:hidden}
+.bars .b i{display:block;height:100%;background:var(--blue-mid)}
+.bars .v{font-family:var(--mono);font-size:.8rem;color:#51607A;text-align:right}
+.bars .sumrow{border-top:1px solid var(--line);padding-top:4px}
+/* score table */
+.tablewrap{overflow-x:auto}
+table.sim{border-collapse:collapse;font-family:var(--mono);font-size:.8rem;margin:4px 0}
+table.sim th{font-weight:500;color:#51607A;padding:4px 6px;text-align:center}
+table.sim th[scope=row]{text-align:right}
+table.sim td{padding:0;border:1px solid #fff}
+table.sim td button{
+  width:46px;height:34px;border:0;cursor:pointer;font-family:var(--mono);font-size:.78rem;border-radius:2px;
+}
+table.sim td button:focus-visible{outline:2.5px solid var(--gold);outline-offset:-2px}
+table.sim td button.on{outline:2.5px solid var(--gold);outline-offset:-2px}
+table.sim td.self button{background:#F2F2F2;color:#98A2B5;cursor:default}
+/* readouts */
+.readbox{border:1px solid var(--line);border-radius:4px;padding:12px 16px;background:#FAFAFA;margin-top:14px}
+.readbox .big{font-family:var(--mono);font-size:1.3rem;color:var(--berkeley)}
+.pairtexts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 10px}
+.pairtexts p{font-size:.9rem;border-left:3px solid var(--c1);padding-left:10px}
+.pairtexts p+p{border-left-color:var(--c2)}
+/* buttons */
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button.btn{
+  font-family:var(--sans);font-weight:600;font-size:.9rem;color:#fff;background:var(--berkeley);
+  border:none;border-radius:4px;padding:9px 18px;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;
+}
+button.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,38,118,.22)}
+button.btn:focus-visible{outline:2.5px solid var(--gold);outline-offset:2px}
+button.btn-ghost{background:#fff;color:var(--berkeley);border:1.5px solid var(--berkeley)}
+button.btn-ghost[aria-pressed=true]{background:var(--berkeley);color:#fff}
+button.btn-sm{padding:6px 12px;font-size:.84rem;font-family:var(--mono);font-weight:500}
+/* ranked neighbors */
+ol.ranked{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:12px}
+ol.ranked button{
+  width:100%;text-align:left;display:grid;grid-template-columns:2.2em 4.2em 1fr;gap:10px;align-items:baseline;
+  font-family:var(--sans);font-size:.9rem;line-height:1.45;color:var(--ink);
+  background:#fff;border:1.5px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer;
+}
+ol.ranked button:hover{border-color:var(--blue-mid)}
+ol.ranked button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+ol.ranked button[aria-pressed=true]{border-color:var(--c2);background:#FFF8EA}
+ol.ranked .rk{font-family:var(--mono);color:#98A2B5}
+ol.ranked .sc{font-family:var(--mono);color:var(--berkeley);font-weight:500}
+/* quiz cards */
+.qcard{border:1px solid var(--line);border-radius:4px;padding:18px 20px;margin:18px 0 0;background:#FAFAFA}
+.qcard h3{font-family:var(--serif);font-size:1.12rem;color:var(--berkeley);margin-bottom:8px}
+.qcard .opts{display:flex;flex-direction:column;gap:8px;margin:10px 0 14px}
+.qcard label{display:flex;gap:10px;align-items:flex-start;font-size:.93rem;cursor:pointer}
+.qcard input[type=radio]{margin-top:4px;accent-color:var(--berkeley)}
+.verdict{border-radius:4px;padding:10px 14px;font-size:.92rem;margin-top:10px;display:none}
+.verdict.show{display:block}
+.verdict.good{background:#E8F4EC;color:var(--ok);border:1px solid #BFE0CB}
+.verdict.bad{background:#F9E9E7;color:var(--err);border:1px solid #EAC7C3}
+/* groups */
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px}
+.group{border:1.5px solid var(--line);border-top-width:5px;border-radius:4px;padding:10px 14px;background:#fff}
+.group h3{font-family:var(--serif);font-size:1rem;color:var(--berkeley);margin-bottom:2px}
+.group .terms{font-family:var(--mono);font-size:.8rem;color:#51607A;margin-bottom:6px}
+.group ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+.group li{font-size:.85rem;line-height:1.4}
+.optional-tag{display:inline-block;font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--berkeley);background:var(--gold-soft);border-radius:3px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+/* recap */
+.recap{background:linear-gradient(0deg, rgba(0,38,118,.045), rgba(0,38,118,.045)),var(--card);border:1px solid var(--line)}
+.recap ul{margin:8px 0 0 20px}
+.recap li{margin-bottom:7px;font-size:.95rem}
+.recap li::marker{color:var(--gold)}
+footer{border-top:1px solid var(--line);padding:24px 0 44px;font-size:.85rem;color:#6B7890;margin-top:8px}
+@media (max-width:760px){.pairtexts{grid-template-columns:1fr}.card{padding:18px 16px}}
+@media (max-width:480px){.wrap{padding:0 16px}table.sim td button{width:34px;height:30px;font-size:.7rem}table.sim th{padding:3px 2px;font-size:.72rem}}
+
+/* ═══ MaCSS skin, aligned with macss.berkeley.edu ═══ */
+html,body{overflow-x:clip}
+.mast{background:var(--berkeley);margin:0 calc(50% - 50vw);padding:12px calc(50vw - 50%);display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.14)}
+.mast .brand{color:#fff;font-family:var(--sans);font-size:.9rem;font-weight:600;letter-spacing:.01em}
+.mast .brand .uc{font-family:Georgia,"Times New Roman",serif;color:var(--gold);font-size:1.04rem;font-weight:700;margin-right:7px}
+.mast a{color:#fff;font-family:var(--sans);font-weight:600;font-size:.83rem;text-decoration:none;border-bottom:1.5px solid rgba(255,255,255,.35);border-radius:0}
+.mast a:hover{border-bottom-color:var(--gold);color:#fff;text-decoration:none}
+.mast a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.wrap>header{background:var(--berkeley);margin:0 calc(50% - 50vw);padding:30px calc(50vw - 50%) 28px;border-bottom:5px solid var(--gold);margin-bottom:40px}
+.wrap>header .eyebrow{display:none}
+.wrap>header h1{color:#fff;font-weight:800;letter-spacing:-.015em}
+.wrap>header .lede{color:rgba(255,255,255,.9)}
+.wrap>header .chip-line{border-color:rgba(255,255,255,.55);color:#fff;background:transparent}
+.rule{display:none}
+h2 .step{color:var(--berkeley)}
+footer{background:var(--berkeley);color:rgba(255,255,255,.85);margin:44px calc(50% - 50vw) 0;padding:20px calc(50vw - 50%) 26px;border-top:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="mast"><span class="brand"><span class="uc">UC Berkeley</span>COMPSS 211A · Computing I</span><a href="../index.html">← All interactives</a></div>
+
+<header>
+  <p class="eyebrow">COMPSS 211A · Computing I</p>
+  <h1>Finding similar documents</h1>
+  <div class="chips">
+    <span class="chip chip-gold">Week 9 · Document similarity</span>
+    <span class="chip chip-line">5–10 minutes</span>
+    <span class="chip chip-line">Eight made-up comments</span>
+  </div>
+  <p class="lede">
+    This page runs the Lab 9 workflow on eight short campus comments. Turn each comment into a
+    TF-IDF row, score every pair with cosine similarity, find the comments closest to one anchor,
+    and read the shared terms behind each score. Sorting the comments into groups with KMeans is
+    an optional last step. The numbers come from scikit-learn with the settings shown in the code.
+  </p>
+</header>
+<hr class="rule">
+
+<!-- ══════════════ 1 · rows ══════════════ -->
+<section aria-labelledby="s1">
+  <h2 id="s1"><span class="step">1·</span>One row per document</h2>
+  <p class="section-note">
+    <code class="inl">TfidfVectorizer</code> turns each comment into a row of numbers, one number
+    per term. That row is the document vector. Click a comment to see the terms in its row that
+    are not zero. Stopwords such as <code class="inl">the</code> and <code class="inl">too</code>
+    are removed, so they have no column.
+  </p>
+  <div class="card">
+    <ol class="doclist" id="doclist"></ol>
+    <div class="readbox" id="rowOut" aria-live="polite"></div>
+    <pre class="code">vectorizer = TfidfVectorizer(stop_words="english")
+tfidf_matrix = vectorizer.fit_transform(comments)
+tfidf_matrix.shape   # (8, 43): 8 comments, 43 terms</pre>
+  </div>
+</section>
+
+<!-- ══════════════ 2 · score table ══════════════ -->
+<section aria-labelledby="s2">
+  <h2 id="s2"><span class="step">2·</span>Score every pair with cosine similarity</h2>
+  <p class="section-note">
+    <code class="inl">cosine_similarity(tfidf_matrix)</code> returns an 8 × 8 table. Row
+    <em>i</em> holds the scores between document <em>i</em> and every document. A score of 0
+    means the two documents share no terms. TF-IDF weights are never negative, so scores stay
+    between 0 and 1. Click a cell to see which shared terms make up its score.
+  </p>
+  <div class="card">
+    <div class="tablewrap"><table class="sim" id="simTable" aria-label="Cosine similarity between every pair of documents"></table></div>
+    <div class="readbox" id="pairOut" aria-live="polite"><span class="small">Click a cell to compare two documents.</span></div>
+    <pre class="code">similarity = cosine_similarity(tfidf_matrix)
+similarity.shape   # (8, 8)</pre>
+  </div>
+</section>
+
+<!-- ══════════════ 3 · nearest ══════════════ -->
+<section aria-labelledby="s3">
+  <h2 id="s3"><span class="step">3·</span>Find and read the nearest documents</h2>
+  <p class="section-note">
+    Pick an anchor. The page sorts its row of scores from high to low, skips the anchor itself,
+    and keeps the next three. Click a neighbor to read both comments and the terms they share.
+    Each shared term adds the product of its two weights, and the products add up to the score.
+  </p>
+  <div class="card">
+    <h3 class="sub">Anchor</h3>
+    <div class="btnrow" id="anchorBtns" role="group" aria-label="Choose the anchor document"></div>
+    <ol class="ranked" id="ranked" aria-live="polite"></ol>
+    <div class="readbox" id="nnOut" aria-live="polite"></div>
+    <pre class="code">scores = similarity[anchor_id]
+nearest_ids = scores.argsort()[::-1][1:4]
+
+shared = pd.Series(anchor_row * neighbor_row, index=terms)
+shared[shared &gt; 0].sort_values(ascending=False)</pre>
+
+    <div class="qcard">
+      <h3>Does the top match hold up?</h3>
+      <p style="font-size:.93rem">The highest score in the table is Doc 5 and Doc 6, at 0.51. It is higher than Doc 0 and Doc 1, which both ask for the library to stay open during finals. Set the anchor to Doc 5 and read the match. What is the score based on?</p>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="p1" value="a"> The same topic: both comments are about long lines on campus</label>
+        <label><input type="radio" name="p1" value="b"> Words about how the results were reported: <code class="inl">survey</code>, <code class="inl">results</code>, <code class="inl">percent</code>, <code class="inl">said</code>. One comment is about the dining hall and the other is about the shuttle.</label>
+        <label><input type="radio" name="p1" value="c"> A score above 0.5 means the two comments make the same argument</label>
+      </div>
+      <button class="btn" id="checkP1">Check</button>
+      <div class="verdict" id="v-p1" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 4 · kmeans ══════════════ -->
+<section aria-labelledby="s4">
+  <h2 id="s4"><span class="step">4·</span>Sort the documents into groups<span class="optional-tag">Optional</span></h2>
+  <p class="section-note">
+    KMeans puts each document into one of <code class="inl">n_clusters</code> groups so that
+    documents in a group have similar rows. <code class="inl">random_state=211</code> fixes the
+    starting point, so you get the same groups every time. That makes the result repeatable. It
+    does not make the groups correct. The group numbers are labels, not rankings. Each group shows
+    the four terms with the highest average weight.
+  </p>
+  <div class="card">
+    <div class="btnrow" id="kBtns" role="group" aria-label="Choose n_clusters">
+      <span class="small" style="margin-right:4px">n_clusters =</span>
+    </div>
+    <div class="groups" id="groups" aria-live="polite"></div>
+    <pre class="code" id="kCode"></pre>
+
+    <div class="qcard">
+      <h3>Describe a group</h3>
+      <p style="font-size:.93rem">Set <code class="inl">n_clusters</code> to 3. Group 0 has the top terms <code class="inl">late, survey, percent, results</code>. Read its three comments. Which description fits?</p>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="p2" value="a"> “Shuttle complaints”</label>
+        <label><input type="radio" name="p2" value="b"> “Survey results”</label>
+        <label><input type="radio" name="p2" value="c"> A mixed group: two survey reports on different topics and one comment about a late shuttle</label>
+      </div>
+      <button class="btn" id="checkP2">Check</button>
+      <div class="verdict" id="v-p2" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ recap ══════════════ -->
+<section aria-labelledby="s5">
+  <h2 id="s5"><span class="step">✓</span>Summary</h2>
+  <div class="card recap">
+    <ul>
+      <li>Each row of the TF-IDF table is a <strong>document vector</strong>: one number per term.</li>
+      <li><strong>Cosine similarity</strong> scores two rows from 0 (no shared terms) to 1. Compare scores within one corpus and one set of vectorizer settings.</li>
+      <li>To find the nearest documents, sort the anchor’s row of scores, skip the anchor, and keep the next few.</li>
+      <li>The <strong>shared terms</strong> show what a score is made of. A high score can come from words about how something was reported rather than what it is about.</li>
+      <li><strong>Read the matches.</strong> A high score shows shared weighted terms. It does not show that two documents make the same argument or belong to the same topic.</li>
+      <li>KMeans is optional. Read a group’s documents before you describe it, and check whether it stays together with another <code class="inl">n_clusters</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>COMPSS 211A · UC Berkeley · CC BY 4.0 · Eight made-up comments. Scores computed with scikit-learn 1.5.</footer>
+</div>
+
+<script>
+"use strict";
+/* Data from scikit-learn 1.5: TfidfVectorizer(stop_words="english") on DOCS,
+   KMeans(n_clusters=k, random_state=211). Rows are L2-normalized, so a dot
+   product of two rows is their cosine similarity. */
+const DOCS=[
+ "The library closes too early during finals. Students need a quiet place to study at night.",
+ "Please keep the library open later during finals week. There is no quiet place to study after ten.",
+ "The shuttle was late again this morning, and I missed my first lecture.",
+ "The night shuttle skips the stop by the library, and waiting there in the dark feels unsafe.",
+ "Dining hall coffee is cheap, but the lunch line takes twenty minutes.",
+ "Survey results: 62 percent of students said the dining hall line was too long.",
+ "Survey results: 48 percent of students said the shuttle was late at least once a week.",
+ "Coffee at the student union beats the dining hall, and the line is short."
+];
+const TERMS=["48","62","beats","cheap","closes","coffee","dark","dining","early","feels","finals","hall","late","later","lecture","library","line","long","lunch","minutes","missed","morning","need","night","open","percent","place","quiet","results","said","short","shuttle","skips","stop","student","students","study","survey","takes","union","unsafe","waiting","week"];
+const ROWS=[{"4":0.3637,"8":0.3637,"10":0.3048,"15":0.2631,"22":0.3637,"23":0.3048,"26":0.3048,"27":0.3048,"35":0.2631,"36":0.3048},{"10":0.3412,"13":0.4071,"15":0.2944,"24":0.4071,"26":0.3412,"27":0.3412,"36":0.3412,"42":0.3412},{"12":0.4077,"14":0.4865,"20":0.4865,"21":0.4865,"31":0.3518},{"6":0.3592,"9":0.3592,"15":0.2598,"23":0.3011,"31":0.2598,"32":0.3592,"33":0.3592,"40":0.3592,"41":0.3592},{"3":0.3993,"5":0.3347,"7":0.2888,"11":0.2888,"16":0.2888,"18":0.3993,"19":0.3993,"38":0.3993},{"1":0.3807,"7":0.2753,"11":0.2753,"16":0.2753,"17":0.3807,"25":0.319,"28":0.319,"29":0.319,"35":0.2753,"37":0.319},{"0":0.3997,"12":0.335,"25":0.335,"28":0.335,"29":0.335,"31":0.289,"35":0.289,"37":0.335,"42":0.335},{"2":0.3993,"5":0.3347,"7":0.2888,"11":0.2888,"16":0.2888,"30":0.3993,"34":0.3993,"39":0.3993}];
+const KM={"2":{"labels":[0,0,0,0,1,0,0,1],"top":[["shuttle","students","library","late"],["coffee","line","hall","dining"]]},"3":{"labels":[1,1,0,1,2,0,0,2],"top":[["late","survey","percent","results"],["library","finals","quiet","study"],["coffee","line","hall","dining"]]},"4":{"labels":[1,1,0,3,2,0,0,2],"top":[["late","survey","percent","results"],["quiet","study","finals","place"],["coffee","line","hall","dining"],["unsafe","waiting","dark","stop"]]}};
+const N=DOCS.length;
+const GCOLORS=["#2D6AA3","#C4820E","#6B4FA0","#1E7D4E"];
+
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const f2=v=>v.toFixed(2), f3=v=>v.toFixed(3);
+
+function shared(i,j){
+  const out=[];
+  for(const k in ROWS[i]) if(k in ROWS[j]) out.push({t:TERMS[k],v:ROWS[i][k]*ROWS[j][k]});
+  return out.sort((a,b)=>b.v-a.v);
+}
+const SIM=[...Array(N)].map((_,i)=>[...Array(N)].map((_,j)=>i===j?1:shared(i,j).reduce((s,x)=>s+x.v,0)));
+
+function barsHTML(items,max,sumLabel){
+  let h=`<div class="bars">`;
+  items.forEach(x=>{h+=`<span class="t">${esc(x.t)}</span><span class="b"><i style="width:${(100*x.v/max).toFixed(1)}%"></i></span><span class="v">${f3(x.v)}</span>`;});
+  if(sumLabel) h+=`<span class="t sumrow">${sumLabel}</span><span class="sumrow"></span><span class="v sumrow">${f3(items.reduce((s,x)=>s+x.v,0))}</span>`;
+  return h+`</div>`;
+}
+function sharedHTML(i,j){
+  const sh=shared(i,j);
+  if(!sh.length) return `<p class="small" style="margin-top:6px">No shared terms, so the score is 0.</p>`;
+  return barsHTML(sh,sh[0].v,"sum");
+}
+
+/* ---------- 1 · rows ---------- */
+let rowSel=0;
+function renderRow(){
+  document.querySelectorAll("#doclist button").forEach((b,i)=>b.setAttribute("aria-pressed",i===rowSel));
+  const items=Object.entries(ROWS[rowSel]).map(([k,v])=>({t:TERMS[k],v})).sort((a,b)=>b.v-a.v);
+  $("rowOut").innerHTML=`<strong style="font-family:var(--mono)">Doc ${rowSel}</strong> <span class="small">· ${items.length} of 43 terms are not zero. The other ${43-items.length} are 0.</span>`+barsHTML(items,0.5);
+}
+DOCS.forEach((d,i)=>{
+  const li=document.createElement("li");
+  const b=document.createElement("button");b.type="button";
+  b.innerHTML=`<span class="docid">Doc ${i}</span><span>${esc(d)}</span>`;
+  b.addEventListener("click",()=>{rowSel=i;renderRow();});
+  li.appendChild(b);$("doclist").appendChild(li);
+});
+renderRow();
+
+/* ---------- 2 · score table ---------- */
+function cellColor(v){ // white → Berkeley blue
+  const a=Math.min(1,v/0.6);
+  const mix=(c1,c2)=>Math.round(c1+(c2-c1)*a);
+  return `rgb(${mix(255,0)},${mix(255,38)},${mix(255,118)})`;
+}
+(function buildTable(){
+  const t=$("simTable");
+  let h=`<thead><tr><th></th>`+DOCS.map((_,j)=>`<th scope="col">${j}</th>`).join("")+`</tr></thead><tbody>`;
+  for(let i=0;i<N;i++){
+    h+=`<tr><th scope="row">Doc ${i}</th>`;
+    for(let j=0;j<N;j++){
+      const v=SIM[i][j];
+      if(i===j){h+=`<td class="self"><button type="button" disabled aria-label="Doc ${i} with itself: 1.00">1.00</button></td>`;continue;}
+      h+=`<td><button type="button" data-i="${i}" data-j="${j}" style="background:${cellColor(v)};color:${v>0.3?"#fff":"#2B3B57"}" aria-label="Doc ${i} and Doc ${j}: ${f2(v)}">${f2(v)}</button></td>`;
+    }
+    h+=`</tr>`;
+  }
+  t.innerHTML=h+`</tbody>`;
+  t.addEventListener("click",e=>{
+    const b=e.target.closest("button[data-i]");if(!b)return;
+    t.querySelectorAll("button.on").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    const i=+b.dataset.i,j=+b.dataset.j;
+    $("pairOut").innerHTML=`<strong style="font-family:var(--mono)">Doc ${i} · Doc ${j}</strong> <span class="big">${f2(SIM[i][j])}</span>`+
+      `<div class="pairtexts"><p>${esc(DOCS[i])}</p><p>${esc(DOCS[j])}</p></div>`+sharedHTML(i,j);
+  });
+})();
+
+/* ---------- 3 · nearest ---------- */
+let anchor=0, nb=null;
+function nearest(i){ // same order as scores.argsort()[::-1]: ties go to the higher index
+  return [...Array(N).keys()].filter(j=>j!==i).sort((a,b)=>SIM[i][b]-SIM[i][a]||b-a).slice(0,3);
+}
+function renderNearest(){
+  document.querySelectorAll("#anchorBtns button").forEach((b,i)=>b.setAttribute("aria-pressed",i===anchor));
+  const ids=nearest(anchor);
+  if(nb===null||!ids.includes(nb)) nb=ids[0];
+  $("ranked").innerHTML="";
+  ids.forEach((j,r)=>{
+    const li=document.createElement("li");
+    const b=document.createElement("button");b.type="button";b.setAttribute("aria-pressed",j===nb);
+    b.innerHTML=`<span class="rk">${r+1}</span><span class="sc">${f2(SIM[anchor][j])}</span><span><span class="docid" style="margin-right:8px">Doc ${j}</span>${esc(DOCS[j])}</span>`;
+    b.addEventListener("click",()=>{nb=j;renderNearest();});
+    li.appendChild(b);$("ranked").appendChild(li);
+  });
+  $("nnOut").innerHTML=`<strong style="font-family:var(--mono)">Anchor Doc ${anchor} · Doc ${nb}</strong> <span class="big">${f2(SIM[anchor][nb])}</span>`+
+    `<div class="pairtexts"><p>${esc(DOCS[anchor])}</p><p>${esc(DOCS[nb])}</p></div>`+sharedHTML(anchor,nb);
+}
+DOCS.forEach((_,i)=>{
+  const b=document.createElement("button");b.type="button";b.className="btn btn-ghost btn-sm";b.textContent=`Doc ${i}`;
+  b.addEventListener("click",()=>{anchor=i;nb=null;renderNearest();});
+  $("anchorBtns").appendChild(b);
+});
+renderNearest();
+
+$("checkP1").addEventListener("click",()=>{
+  const pick=document.querySelector("input[name=p1]:checked"), v=$("v-p1");
+  if(!pick){v.className="verdict show bad";v.textContent="Pick an answer first.";return;}
+  anchor=5;nb=6;renderNearest();
+  const good=pick.value==="b";
+  v.className="verdict show "+(good?"good":"bad");
+  v.textContent=good
+    ? "✓ Right. Four of the five shared terms describe how the results were reported. The match does not hold up on reading. Lab 9 has the same problem: two medical studies match on ci, 95, and median."
+    : pick.value==="a"
+      ? "✗ Not quite. Only Doc 5 mentions a line. Look at the shared terms below: survey, results, percent, and said are about how the results were reported, not what the comments are about."
+      : "✗ Not quite. A score only shows shared weighted terms. Read the two comments below: one is about the dining hall line and the other is about a late shuttle.";
+});
+
+/* ---------- 4 · kmeans ---------- */
+let k=null;
+function renderGroups(){
+  document.querySelectorAll("#kBtns button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===k));
+  const {labels,top}=KM[k];
+  $("groups").innerHTML=top.map((terms,g)=>{
+    const members=labels.map((l,i)=>l===g?i:-1).filter(i=>i>=0);
+    return `<div class="group" style="border-top-color:${GCOLORS[g]}"><h3>Group ${g} · ${members.length} document${members.length===1?"":"s"}</h3>`+
+      `<p class="terms">${terms.join(", ")}</p><ul>`+
+      members.map(i=>`<li><span class="docid" style="margin-right:6px">Doc ${i}</span>${esc(DOCS[i])}</li>`).join("")+`</ul></div>`;
+  }).join("");
+  $("kCode").textContent=`model = KMeans(n_clusters=${k}, random_state=211)\nlabels = model.fit_predict(tfidf_matrix)`;
+}
+[2,3,4].forEach(n=>{
+  const b=document.createElement("button");b.type="button";b.className="btn btn-ghost btn-sm";b.textContent=n;b.dataset.k=n;
+  b.addEventListener("click",()=>{k=n;renderGroups();});
+  $("kBtns").appendChild(b);
+});
+k=3;renderGroups();
+
+$("checkP2").addEventListener("click",()=>{
+  const pick=document.querySelector("input[name=p2]:checked"), v=$("v-p2");
+  if(!pick){v.className="verdict show bad";v.textContent="Pick an answer first.";return;}
+  k=3;renderGroups();
+  const good=pick.value==="c";
+  v.className="verdict show "+(good?"good":"bad");
+  v.textContent=good
+    ? "✓ Right. The group formed around late and the survey words. It is fine to say a group is too mixed to name. Now try n_clusters = 2 and 4 and check which documents stay together."
+    : "✗ Not quite. Read all three comments. Doc 5 is a survey about the dining hall, and Doc 2 is not a survey. The group formed around late and the survey words, so describe it as mixed.";
+});
+</script>
+</body>
+</html>

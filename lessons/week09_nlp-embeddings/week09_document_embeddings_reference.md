@@ -1,90 +1,121 @@
-# Week 9: word and document embeddings
+# Week 9: which documents are similar to each other?
 
-An embedding is a row of numbers that places an item in a vector space. We use the space to compare items, but the space does not tell us what a result means. That part still requires reading, judgment, and knowledge of the data.
+This week answers one question: given a set of documents, which ones use similar language? We measure that with the TF-IDF table from Week 8 and a score called cosine similarity, then read the matches to decide whether they make sense. Sorting documents into groups with KMeans is an optional last step.
 
-## Two kinds of rows
+This is a complete method for a final project. You do not need anything beyond this page and Week 8.
 
-| Model | One row represents | What nearness can suggest |
-|---|---|---|
-| Word embedding | A word | The words appear in similar documents or contexts |
-| Document embedding | A whole document | The documents use similar language or occupy similar model dimensions |
+## One row per document
 
-Near words are not always synonyms. Near documents do not necessarily agree or belong to one clear topic.
+In Week 8, `TfidfVectorizer` turned a column of text into a table with one row per document and one column per term. Each row is a list of numbers that describes one document. That list is called a document vector. Some readings call it a document embedding.
 
-## Word vectors from the AITA comments
+With the OpenAlex sample used in class:
 
-The lecture starts with a TF-IDF table whose rows are Reddit comments and whose columns are words. `TruncatedSVD` compresses that table. We then turn the result around so that each row represents a word.
+- 80 abstracts, so 80 rows;
+- about 1,240 terms that appear in at least two abstracts, so about 1,240 columns.
 
-With the current course file, the shapes are:
+Before you compare anything, decide what one document is in your project: a comment, a post, an abstract, a speech, a chapter. The scores can only compare the units you chose.
 
-- comment-by-word TF-IDF table: `(5000, 1727)`
-- word-vector table: `(1727, 50)`
+## Clean what the vectorizer should not see
 
-The model places words near each other when they are used in similar comments. For example, `wedding` is close to words about brides, clothing, and events. `family` is close to words about relatives and traditions. These results describe this corpus. A news archive or a medical corpus would produce another space.
+Some OpenAlex abstracts contain leftover web markup, such as `<mml:math xmlns:mml="http://www.w3.org/...">` for equations and `&amp;` for an ampersand. `TfidfVectorizer` treats `xlink`, `w3`, and `mrow` as ordinary words. In the raw data, the two most similar abstracts are a paper on dialogue systems and a paper on a radio-frequency circuit. They match because both contain equation markup, not because of their subject.
 
-This is a small LSA word embedding built for class. Pretrained models such as Word2Vec, GloVe, and newer neural embedding models are trained differently and on much more text. The basic workflow is still recognizable: get a vector for each item, compare the vectors, and read the source material before interpreting the comparison.
+The class code removes tags and converts entities before building the table:
 
-## Document vectors from OpenAlex
+```python
+import html
+works["text"] = works["abstract"].str.replace(r"<[^>]+>", " ", regex=True).map(html.unescape)
+```
 
-For documents, the TF-IDF table already has the orientation we want: one abstract per row. LSA compresses its many term columns into a smaller number of dimensions.
-
-The current OpenAlex sample produces:
-
-- TF-IDF table: `(80, 1264)`
-- LSA table: `(80, 8)`
-
-The number of rows stays at 80 because the unit is still an abstract. The number of columns falls from 1,264 terms to eight model dimensions.
-
-In the current run, those eight dimensions retain about 14 percent of the variation in the TF-IDF table. That is substantial compression. It makes a small example easy to inspect, but some information is lost.
-
-## TF-IDF and LSA can give different neighbors
-
-TF-IDF similarity is driven by shared weighted terms. LSA similarity is based on compressed patterns across terms. An abstract can therefore have one set of neighbors under TF-IDF and another under LSA.
-
-Neither list should be accepted from titles alone. Read the anchor abstract and its nearest matches. Look for the language or subject matter that explains the score, and note anything that makes the match doubtful.
+Your own data may have a different problem: signatures, quoted replies, boilerplate headers, or URLs. Look at the words that drive your top matches. That is usually how these problems show up.
 
 ## Cosine similarity
 
-Cosine similarity compares the direction of two vectors. A value closer to 1 means that the two vectors point in more similar directions in the chosen representation.
+`cosine_similarity` compares two document vectors and returns a score.
 
-A high score does not prove that two documents make the same argument, agree with each other, or belong to a natural category. The score can also change when you change preprocessing, the corpus, or the number of LSA dimensions.
+| Score | What it means here |
+|---|---|
+| 0 | The two documents share no terms in the table. |
+| Closer to 1 | The documents give weight to more of the same terms. |
+| 1 | The two rows have the same proportions of term weights (a document compared with itself). |
 
-## Clustering choices
+TF-IDF weights are never negative, so scores stay between 0 and 1.
 
-| Choice | What it changes | What to check |
-|---|---|---|
-| `n_components` | Number of LSA dimensions | How much information did compression retain? |
-| `n_clusters` | Number of KMeans groups | Do the groups remain useful at another reasonable value? |
-| `random_state` | Random steps in the procedure | Can someone reproduce this particular result? |
-| `n_init` | Number of starting solutions tried | Is the result based on a weak starting point? |
+`cosine_similarity(tfidf_matrix)` scores every pair of documents at once and returns a square table. For 80 abstracts, it is `(80, 80)`. Row `i` holds the scores between document `i` and every other document.
 
-A fixed random seed helps someone rerun the analysis. It does not make a cluster valid.
+Scores in this sample are mostly small, with a median around 0.02. The abstracts come from many fields, so most pairs share few terms. Compare scores within one corpus and one set of vectorizer settings. A score of 0.3 does not mean the same thing in another dataset.
 
-Before naming a cluster:
+## Find and read the nearest documents
 
-1. Check its size.
-2. Read several titles and abstracts.
-3. Look for documents that do not fit the tempting label.
-4. Compare the result with another value of `k`.
-5. Describe it as a group made by this model, not a category discovered in the world.
+To find the documents closest to one anchor document:
 
-It is acceptable to leave a cluster unlabeled when its documents do not support a clear description.
+1. Take the anchor's row of scores.
+2. Sort it from high to low.
+3. Skip the first entry, which is the anchor itself.
+4. Keep the next few.
+
+Then read the anchor and its closest matches. A useful check is to list the terms that the two documents share, weighted by how much each term adds to the score. Because `TfidfVectorizer` scales each row to length 1, these products add up to the cosine score:
+
+```python
+shared = pd.Series(anchor_row * neighbor_row, index=terms)
+shared[shared > 0].sort_values(ascending=False).head(10)
+```
+
+In the cleaned OpenAlex data, some matches hold up on reading. Two cosmology papers share `lensing`, `cosmic`, and `structure`. Others do not hold up. A study of menopause timing and a meta-analysis of air pollution match on `age`, `associations`, and `years`. Two medical studies match on `ci`, `95`, and `median`, which are words about how results were reported, not about what was studied.
+
+A high score shows that two documents share weighted terms. It does not show that they make the same argument, agree with each other, or belong to the same topic. Decide that by reading.
+
+## Optional: sort the documents into groups
+
+KMeans assigns each document to one of `k` groups so that documents in a group have similar vectors. You choose `k` with `n_clusters`.
+
+```python
+from sklearn.cluster import KMeans
+model = KMeans(n_clusters=5, random_state=211)
+works["cluster"] = model.fit_predict(tfidf_matrix)
+```
+
+`random_state` fixes the random starting point so you get the same groups each time you run the notebook. A fixed seed makes the result repeatable. It does not make the groups correct.
+
+The cluster numbers are labels, not rankings. Group 0 is not first or best.
+
+Before you describe a group:
+
+1. Check how many documents it has.
+2. Print the terms with the highest average weight in the group.
+3. Read several titles and abstracts, including ones that do not fit the description you have in mind.
+4. Rerun with another value of `n_clusters` and see whether the group stays together.
+
+Describe a group as "a group the model formed around these terms," not as a category that exists in the data. It is fine to say a group is too mixed to describe.
+
+## Using this in your final project
+
+A small, complete project could be: pick one question, build a TF-IDF table for one dataset, find the nearest documents for a handful of anchors you chose for a reason, and report what you found when you read them.
+
+In your write-up, report:
+
+- what one document is and how many you have;
+- the cleaning you did and the `TfidfVectorizer` settings (`stop_words`, `min_df`, `max_features`, `ngram_range`);
+- how you chose the anchor documents;
+- for each anchor, its closest matches, their scores, and the shared terms;
+- which matches held up on reading and which did not, with a reason for each;
+- if you used KMeans: the value of `n_clusters`, the group sizes, the top terms, and what changed with a different value.
+
+## Going further
+
+TF-IDF compares documents by the exact terms they share, so "car" and "automobile" count as different words. Other methods address this:
+
+- **LSA** (`TruncatedSVD` in scikit-learn) compresses the TF-IDF table into a smaller number of columns built from terms that tend to appear together.
+- **Pretrained embedding models** (for example, the `sentence-transformers` library or an embedding API) produce a vector for each document from a model trained on much more text.
+
+Both replace the TF-IDF table in the workflow above. The steps after that are the same: compute cosine similarity, find the nearest documents, and read them. None of these methods decides what counts as a document or whether a match makes sense. That part is still up to you.
 
 ## About the course data
 
-The AITA file is a fixed historical sample of Reddit comments included for teaching. It is not a sample of Reddit as a whole.
-
-The OpenAlex file contains 80 works with abstracts and at least one UC Berkeley-affiliated authorship. That filter does not mean every work was led by Berkeley or written by Berkeley faculty. The small sample is useful for practicing the workflow, not for making broad claims about Berkeley research.
-
-## Newer embedding models
-
-Current embedding models can handle context and word order better than this small LSA model. A library or API can create those vectors with very little code. It cannot decide what counts as a document, whether the corpus fits the research question, or whether a nearest neighbor makes sense after close reading.
+The OpenAlex file contains 80 works with abstracts and at least one UC Berkeley-affiliated authorship. That filter does not mean every work was led by Berkeley or written by Berkeley faculty. The sample is useful for practicing the workflow, not for making claims about Berkeley research.
 
 ## Documentation
 
 - [Scikit-learn text feature extraction](https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction)
-- [TruncatedSVD](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html)
 - [Cosine similarity](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html)
 - [KMeans](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
-
-For a later discussion of bias, the Caliskan, Bryson, and Narayanan study shows how word embeddings can reproduce historical associations found in their training data.
+- [TruncatedSVD](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html) (optional, for LSA)
