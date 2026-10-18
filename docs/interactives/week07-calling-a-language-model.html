@@ -100,6 +100,19 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 .codebook dd{margin:0}
 .open-ref{display:block;margin-top:10px;padding:10px 12px;background:var(--mark);border-left:4px solid var(--gold);border-radius:4px}
 .open-ref button{margin:6px 8px 0 0}
+.fig{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 14px;padding:12px;border:1px solid var(--line);border-radius:6px;background:#FBFCFE;font-size:.88rem}
+.fig .box{border:1px solid var(--line);border-radius:4px;background:white;padding:8px 10px}
+.fig .box b{display:block;font-family:var(--mono);color:var(--navy);font-size:.85rem}
+.fig .box span{display:block}
+.fig .same{border-left:4px solid var(--navy)}
+.fig .changes{border-left:4px solid var(--gold)}
+.fig .model{background:var(--navy)}
+.fig .model b{color:white}
+.fig .op{color:var(--muted);font-weight:700}
+.fig-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.fig-compare h5{margin:0 0 6px;font-size:.88rem;color:var(--navy)}
+.fig-compare pre.out{margin:0;background:white}
+@media(max-width:860px){.fig-compare{grid-template-columns:1fr}}
 .reference details.flash{outline:3px solid var(--gold);outline-offset:4px;border-radius:4px}
 .comment-list{margin:6px 0 0;padding-left:0;list-style:none;font-size:.86rem}
 .comment-list li{margin:0 0 6px}
@@ -136,7 +149,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 <div class="brief">
   <p><b>The question.</b> Six comments reply to a post about a borrowed bike. Can Gemini label them with your codebook the way you would?</p>
   <ol class="stages" id="stages" aria-label="Where you are">
-    <li data-stage="yours"><span>Your labels</span></li><li data-stage="call"><span>One call</span></li><li data-stage="json"><span>JSON</span></li><li data-stage="all"><span>Every comment</span></li><li data-stage="fail"><span>Failed calls</span></li><li data-stage="record"><span>Record</span></li>
+    <li data-stage="yours"><span>Your labels</span></li><li data-stage="call"><span>One call</span></li><li data-stage="json"><span>A fixed form</span></li><li data-stage="all"><span>Every comment</span></li><li data-stage="compare"><span>Compare</span></li>
   </ol>
 </div>
 <nav class="pager" aria-label="Steps">
@@ -156,7 +169,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 </div>
 </main>
 
-<footer><div class="wrap">COMPSS 211A · UC Berkeley · CC BY 4.0. Python runs in your browser with Pyodide. Nothing is sent to Gemini: the simulated Gemini answers with <a href="data/week07/gemini_responses.json">responses recorded</a> from gemini-3.5-flash-lite on October 14, 2026. Your code is saved in this browser only. In Lab 7 you send these calls yourself, with your own key.</div></footer>
+<footer><div class="wrap">COMPSS 211A · UC Berkeley · CC BY 4.0. Python runs in your browser with Pyodide. Nothing is sent to Gemini: the simulated Gemini answers with <a href="data/week07/gemini_responses.json">responses recorded</a> from gemini-3.5-flash-lite on October 14, 2026. Your code is saved in this browser only.</div></footer>
 
 <script src="sandbox/sandbox.js"></script>
 <script>
@@ -196,19 +209,35 @@ const SETUP = [
 
 // Code that later steps load before the student's code, so a step does not depend on an earlier answer.
 const PROMPT_C1 = 'prompt = build_prompt(text=comments["C1"])';
-const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
-const ASK_FN = "def ask(prompt):\n    wait = 10  # seconds\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise  # stop and show the error\n            print(\"Error\", error.code, \"- waiting\", wait, \"seconds, then trying again\")\n            time.sleep(wait)\n            wait = wait * 2  # wait twice as long next time";
-const ASK = 'RETRY_CODES = {429, 503}\n\n' + ASK_FN;
+const LOOP = 'gemini_labels = {}\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    gemini_labels[comment_id] = answer["label"]';
+
+// Small diagrams shown above a step's text.
+const FIG_CALL = `<div class="fig" role="img" aria-label="One call sends SYSTEM and the prompt to Gemini and gets back response.text.">
+  <div class="box same"><b>SYSTEM</b><span>the task and the codebook</span><span class="dim">the same for every comment</span></div>
+  <span class="op">+</span>
+  <div class="box changes"><b>prompt</b><span>one comment</span><span class="dim">changes each time</span></div>
+  <span class="op">→</span>
+  <div class="box model"><b>Gemini</b></div>
+  <span class="op">→</span>
+  <div class="box"><b>response.text</b><span>the answer, as text</span></div>
+</div>`;
+const FIG_SCHEMA = `<div class="fig fig-compare">
+  <div><h5>Without a schema: a sentence</h5><pre class="out">I would label this comment poster_at_fault. The commenter points out that taking someone else's property …</pre></div>
+  <div><h5>With a schema: a filled-in form</h5><pre class="out">{
+  "label": "poster_at_fault",
+  "reason": "The commenter points out that taking someone else's property …"
+}</pre><p class="small">"label" must be one of the three labels. "reason" can be any text.</p></div>
+</div>`;
 
 // The variables in the side panel. from: the first step (counted from 0) that has the variable.
 const VARIABLES = [
   {name: 'comments', kind: 'dictionary', what: 'the six comments, from ID to text'},
   {name: 'build_prompt', kind: 'function', what: 'makes the prompt for one comment: <code>build_prompt(text=...)</code>'},
   {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook', from: 2},
-  {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the fields the answer must have', from: 4},
+  {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the schema: the form the answer must fill in', from: 3},
   {name: 'GEMINI_MODEL', kind: 'text', what: 'the name of the model'},
   {name: 'client', kind: 'connection', what: 'sends calls to the simulated Gemini'},
-  {name: 'CONFIG', kind: 'settings', what: '<code>SYSTEM</code>, JSON and the schema, from step 5', from: 5},
+  {name: 'CONFIG', kind: 'settings', what: 'the settings from step 4: <code>SYSTEM</code>, JSON and the schema', from: 4},
 ];
 
 // One entry per step.
@@ -242,10 +271,11 @@ const STEPS = [
    check: {exprs: ['prompt']},
    hint: 'The blank is <code>comments["C1"]</code>, the text of comment C1.',
    after: 'In step 6, a loop builds the prompt for each comment in turn.'},
-  {topic: 'Send one call', stage: 'call', pre: PROMPT_C1,
+  {topic: 'Send one call', stage: 'call', pre: PROMPT_C1, figure: FIG_CALL,
    vars: [['prompt', 'text', 'the prompt for C1']],
-   intro: ['<code>client.models.generate_content(...)</code> sends one call. It takes the name of the model, the prompt (<code>contents</code>) and the settings (<code>config</code>). The answer is in <code>response.text</code>.',
-           'The <b>system instruction</b> goes in the settings. It holds the task and the codebook, and it is the same for every comment. The example sends the prompt without one.'],
+   intro: ['<code>client.models.generate_content(...)</code> sends one call to Gemini. It takes three things: the name of the model (<code>model</code>), the prompt (<code>contents</code>) and the settings (<code>config</code>). The answer comes back in <code>response.text</code>.',
+           'The settings hold the <b>system instruction</b>, <code>SYSTEM</code>: the task and the codebook. It is the same for every comment, so you write it once. To read it, print <code>SYSTEM</code> in the scratch box at the bottom of the page.',
+           'The example sends the prompt without a system instruction.'],
    example: 'response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)\nprint(response.text)',
    task: 'Run the example. Then fill in the two blanks: the first is the name of the method that sends the call, and the second is the prompt. The call in the box sends <code>SYSTEM</code> as the system instruction.',
    starter: 'response = client.models.____(\n    model=GEMINI_MODEL,\n    contents=____,\n    config=types.GenerateContentConfig(system_instruction=SYSTEM),\n)\nprint(response.text)',
@@ -253,110 +283,68 @@ const STEPS = [
    check: {truths: [['_sim.last() is not None and _sim.last()["comment"] == "C1"', 'The call should send the prompt for comment C1. The second blank is prompt.'],
                     ['_sim.last()["system"] == SYSTEM', 'The call should send SYSTEM as the system instruction. Keep the config line as it is.']]},
    hint: 'The first blank is <code>generate_content</code>. The second blank is <code>prompt</code>.',
-   after: 'Without a system instruction, the model did not know which labels to use. With one, it answered with a label in its own words.'},
-  {topic: 'Read the rest of the response', stage: 'call',
-   vars: [['prompt', 'text', 'the prompt for C1'], ['response', 'response', 'Gemini\'s answer to prompt, with SYSTEM']],
-   pre: PROMPT_C1 + '\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=types.GenerateContentConfig(system_instruction=SYSTEM))',
-   intro: ['A response has more than the text. <code>response.usage_metadata</code> counts the <b>tokens</b>, the pieces of words a model reads and writes. <code>prompt_token_count</code> is the number of tokens sent, and <code>candidates_token_count</code> is the number in the answer.',
-           'The system instruction is sent again with every call, so it is counted in every prompt. Services charge by the token.',
-           '<code>response.candidates[0].finish_reason</code> says why the model stopped. <code>STOP</code> means it finished its answer.'],
-   example: 'print(response.usage_metadata)\nprint(response.candidates[0].finish_reason)',
-   task: 'Run the example. Then fill in the two blanks: <code>n_in</code> is the number of tokens sent, and <code>n_out</code> is the number in the answer.',
-   starter: 'n_in = response.usage_metadata.____\nn_out = response.usage_metadata.____\nprint(n_in, n_out)',
-   answer: 'n_in = response.usage_metadata.prompt_token_count\nn_out = response.usage_metadata.candidates_token_count\nprint(n_in, n_out)',
-   check: {exprs: ['n_in', 'n_out']},
-   hint: 'The first blank is <code>prompt_token_count</code>. The second is <code>candidates_token_count</code>.',
-   after: 'Most of the tokens sent are the system instruction. A long codebook costs more for every text you label.'},
-  {topic: 'Ask for JSON', stage: 'json', pre: PROMPT_C1,
+   after: ['Without the system instruction, Gemini did not know which labels to use. With it, Gemini answered with a label and a reason, in a sentence.',
+           'A sentence is fine for one comment. For 200 comments it is not: you would have to read every answer to find the label. The next step asks Gemini for its answer in a fixed form.']},
+  {topic: 'Ask for a fixed form', stage: 'json', pre: PROMPT_C1, figure: FIG_SCHEMA,
    vars: [['prompt', 'text', 'the prompt for C1']],
-   intro: ['An answer in the model\'s own words is hard to put in a table. A <b>schema</b> lists the fields the answer must have and the labels it may use. To see <code>LABEL_SCHEMA</code>, print it in the scratch box.',
-           'Two settings ask for JSON: <code>response_mime_type="application/json"</code> and <code>response_schema=LABEL_SCHEMA</code>. The answer still comes back as text, in <code>response.text</code>. <code>json.loads</code> turns that text into a dictionary, as <code>response.json()</code> did in Week 6.'],
-   task: 'Fill in the three blanks. The first passes the schema. The second turns the text into a dictionary. The third is the key that holds the label.',
-   starter: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=____,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(type(response.text))\nprint(response.text)\n\nanswer = json.____(response.text)\nlabel = answer["____"]\nlabel',
-   answer: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(type(response.text))\nprint(response.text)\n\nanswer = json.loads(response.text)\nlabel = answer["label"]\nlabel',
+   intro: ['To put answers in a table, every answer needs the same two parts: a label and a reason. A <b>schema</b> describes those parts. Think of it as a form with two boxes that Gemini has to fill in.',
+           '<code>LABEL_SCHEMA</code> is that form, written as a dictionary. The example prints it. Under <code>"properties"</code> are the two boxes. <code>"label"</code> must be one of the three labels listed in <code>"enum"</code>. <code>"reason"</code> can be any text. <code>"required"</code> says that both boxes must be filled in.',
+           'Two settings ask for an answer in this form. <code>response_mime_type="application/json"</code> asks for JSON, the format you read in Week 6. <code>response_schema=LABEL_SCHEMA</code> gives Gemini the form.'],
+   example: 'print(json.dumps(LABEL_SCHEMA, indent=2))',
+   task: 'Run the example. Then fill in the blank with the schema, and run the box.',
+   starter: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=____,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(response.text)',
+   answer: 'config = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n)\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)\nprint(response.text)',
+   check: {exprs: ['response.text']},
+   hint: 'The blank is <code>LABEL_SCHEMA</code>.',
+   after: ['The answer is now JSON with the two parts of the form. But <code>response.text</code> is still text, so Python cannot take out the label yet. The next step turns the text into a dictionary.',
+           'From here on, <code>CONFIG</code> holds these settings: the system instruction, JSON and the schema.']},
+  {topic: 'Read the label', stage: 'json',
+   vars: [['prompt', 'text', 'the prompt for C1'], ['response', 'response', 'Gemini\'s answer to prompt, as JSON text']],
+   pre: PROMPT_C1 + '\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)',
+   intro: '<code>json.loads</code> turns JSON text into a Python dictionary, the way <code>response.json()</code> did in Week 6. Once you have a dictionary, you take out the label by its key.',
+   task: 'Fill in the two blanks. The first turns the text into a dictionary. The second is the key that holds the label.',
+   starter: 'answer = json.____(response.text)\nprint(answer)\n\nlabel = answer["____"]\nlabel',
+   answer: 'answer = json.loads(response.text)\nprint(answer)\n\nlabel = answer["label"]\nlabel',
    check: {exprs: ['answer', 'label']},
-   hint: 'The first blank is <code>LABEL_SCHEMA</code>, the second is <code>loads</code>, and the third is <code>label</code>.',
-   after: 'From here on, <code>CONFIG</code> holds these settings: <code>SYSTEM</code>, JSON and the schema.'},
+   hint: 'The first blank is <code>loads</code>. The second is <code>label</code>.',
+   after: 'You now have the four parts of labeling one comment: build the prompt, send it with the settings, read the JSON, and take out the label.'},
   {topic: 'Label every comment', stage: 'all',
-   intro: 'A loop sends the same system instruction with each comment in turn. <code>comments.items()</code> gives each ID with its text. Each answer becomes one row of a table.',
-   task: 'Fill in the two blanks. The first builds the prompt from the comment\'s text. The second is the key that holds the label.',
-   starter: 'rows = []\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=____)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["____"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)\nresults',
-   answer: LOOP + '\nresults',
-   check: {exprs: ['results'], ordered: true, names: true},
+   intro: ['A loop does the same four things for each comment: build the prompt, send it, read the JSON and take out the label. <code>comments.items()</code> gives each ID with its text.',
+           'The labels go into a dictionary, <code>gemini_labels</code>, that uses the same IDs as your <code>my_labels</code>.'],
+   task: 'Fill in the two blanks. The first is the comment\'s text. The second is the key that holds the label.',
+   starter: 'gemini_labels = {}\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=____)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    gemini_labels[comment_id] = answer["____"]\ngemini_labels',
+   answer: LOOP + '\ngemini_labels',
+   check: {exprs: ['gemini_labels']},
    hint: 'The first blank is <code>text</code>, the loop variable that holds the comment. The second is <code>label</code>.',
-   after: 'The loop sent six calls, one for each comment, and made one row from each answer.'},
-  {topic: 'Compare with your labels', stage: 'all', needsLabels: true, pre: LOOP,
-   vars: [['results', 'table', 'Gemini\'s labels from step 6'], ['my_labels', 'dictionary', 'your labels from step 1']],
-   intro: 'The side panel lists <code>results</code> from the last step and <code>my_labels</code> from step 1. <code>.map(my_labels)</code> looks up each ID in your dictionary.',
-   task: 'Fill in the two blanks. The first adds your labels as a column. The second counts the rows where you and Gemini agree: <code>True</code> counts as 1.',
-   starter: 'results["my_label"] = results["document_id"].map(____)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].____()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
-   answer: 'results["my_label"] = results["document_id"].map(my_labels)\nresults["same"] = results["label"] == results["my_label"]\nn_same = results["same"].sum()\nprint(n_same, "of", len(results), "labels are the same")\nresults[["document_id", "my_label", "label", "reason"]]',
-   check: {exprs: ['n_same']},
-   hint: 'The first blank is <code>my_labels</code>. The second is <code>sum</code>.',
-   after: ['Neither set of labels is the right answer. Where you differ, read the comment and Gemini\'s reason again. Either one of you misread it, or the codebook does not cover it.',
+   after: 'The loop sent six calls, one for each comment.'},
+  {topic: 'Compare with your labels', stage: 'compare', needsLabels: true, pre: LOOP,
+   vars: [['gemini_labels', 'dictionary', 'Gemini\'s labels from step 6'], ['my_labels', 'dictionary', 'your labels from step 1']],
+   intro: '<code>pd.DataFrame</code> can make a table from two dictionaries that have the same keys. Each dictionary becomes a column, and each key becomes a row: one row for each comment.',
+   task: 'Fill in the blank with Gemini\'s labels, and run the box.',
+   starter: 'table = pd.DataFrame({"mine": my_labels, "gemini": ____})\ntable["same"] = table["mine"] == table["gemini"]\ntable',
+   answer: 'table = pd.DataFrame({"mine": my_labels, "gemini": gemini_labels})\ntable["same"] = table["mine"] == table["gemini"]\ntable',
+   check: {exprs: ['table'], ordered: true, names: true},
+   hint: 'The blank is <code>gemini_labels</code>.',
+   after: ['Neither column is the right answer. Where you differ, read the comment again. Either one of you misread it, or the codebook does not cover it.',
            'C3 blames both people. The codebook has no rule for that, so you and the model each had to guess.']},
-  {topic: 'Ask the same question again', stage: 'all',
+  {topic: 'Ask the same question again', stage: 'compare',
    vars: [['prompt', 'text', 'the prompt for C3']],
    pre: '_sim.repeat_mode(True)\nprompt = build_prompt(text=comments["C3"])',
-   intro: ['A language model picks each word partly by chance. The <b>temperature</b> setting controls how much: 0 means as little chance as possible.',
-           'The example sends the same call for C3 three times, with the default temperature.'],
-   example: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\nlabels_default',
-   task: 'Run the example. Then fill in the blank to send the same call three times with the temperature set to 0.',
-   starter: 'zero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=____,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    labels_zero.append(json.loads(response.text)["label"])\nlabels_zero',
-   answer: 'zero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=0,\n)\nlabels_zero = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    labels_zero.append(json.loads(response.text)["label"])\nlabels_zero',
-   check: {exprs: ['list(labels_zero)']},
+   intro: ['A language model picks each word partly by chance, so the same question can get another answer. The <b>temperature</b> setting controls how much chance: 0 means as little as possible.',
+           'The example asks about C3 three times with <code>CONFIG</code>, which uses the default temperature.'],
+   example: 'for i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    print(json.loads(response.text)["label"])',
+   task: 'Run the example. Then fill in the blank to set the temperature to 0, and run the box. It asks about C3 three more times.',
+   starter: 'zero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=____,\n)\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    print(json.loads(response.text)["label"])',
+   answer: 'zero = types.GenerateContentConfig(\n    system_instruction=SYSTEM,\n    response_mime_type="application/json",\n    response_schema=LABEL_SCHEMA,\n    temperature=0,\n)\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=zero)\n    print(json.loads(response.text)["label"])',
+   check: {truths: [['zero.temperature == 0', 'Set temperature to 0.'], ['_sim.calls() >= 3', 'Run the box so that it asks about C3 three times.']]},
    hint: 'The blank is <code>0</code>.',
    after: ['In step 6, Gemini gave C3 <code>unclear</code>. The example said <code>poster_at_fault</code> three times. With temperature 0, the label still changed between calls.',
-           'Temperature 0 makes answers more alike, but not the same. If you label a dataset twice, you can get other counts. Write down the model, the settings and the date with every set of labels.']},
-  {topic: 'Try again when the server is busy', stage: 'fail', pre: '_sim.plan({"C4": ["503", "503"]})',
-   intro: ['In this step the simulated Gemini is busy the first two times you ask about C4. Run the example: the loop stops at C4 with error 503.',
-           'Some errors are temporary, and the same call can work a little later: <b>429</b> (too many calls in one minute) and <b>503</b> (the server is busy). Other errors mean the request itself is wrong, and trying again gives the same error: <b>400</b> (the request is not valid) and <b>404</b> (no model has that name).'],
-   example: 'for comment_id, text in comments.items():\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=build_prompt(text=text), config=CONFIG)\n    print(comment_id, json.loads(response.text)["label"])',
-   task: '<code>ask</code> in the box sends one call. If the call fails with a code in <code>RETRY_CODES</code>, it waits and tries again. Fill in the two codes that are worth trying again.',
-   starter: 'RETRY_CODES = {____, ____}\n\n' + ASK_FN + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(build_prompt(text=text))["label"]\nlabels',
-   answer: ASK + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(build_prompt(text=text))["label"]\nlabels',
-   check: {truths: [['RETRY_CODES == {429, 503}', 'RETRY_CODES should hold the two temporary codes: too many calls in one minute, and a busy server.'],
-                    ['len(labels) == 6', 'labels should have a label for all six comments.']]},
-   hint: 'The two codes are <code>429</code> and <code>503</code>.',
-   after: ['The call for C4 failed twice and worked on the third try. <code>ask</code> waited 10 seconds, then 20: twice as long each time, which gives a busy server more time.',
-           'This page does not really wait. In a notebook, <code>time.sleep(10)</code> waits 10 seconds.']},
-  {topic: 'Don\'t retry every error', stage: 'fail', pre: ASK,
-   vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']],
-   intro: 'The side panel lists <code>ask</code> from the last step. The box has a typo in the name of the model.',
-   task: 'Run the box and read the error. Did <code>ask</code> try again? Then fix the name of the model so that the call works.',
-   starter: 'GEMINI_MODEL = "gemini-3.5-flash-lit"\nanswer = ask(build_prompt(text=comments["C1"]))\nanswer',
-   answer: 'GEMINI_MODEL = "gemini-3.5-flash-lite"\nanswer = ask(build_prompt(text=comments["C1"]))\nanswer',
-   check: {exprs: ['answer']},
-   hint: 'The name ends in <code>lite</code>: <code>"gemini-3.5-flash-lite"</code>.',
-   after: 'A 404 is about the request, so <code>ask</code> stopped at once instead of waiting. Retrying would have given the same 404.'},
-  {topic: 'Save each answer right away', stage: 'fail',
-   vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']], pre: ASK + '\n_sim.plan({"C5": ["drop"]})',
-   intro: ['If a loop stops halfway, the answers that are only in memory are lost. So save each answer to a file as soon as you get it. A second run can then skip the comments that are already in the file.',
-           '<code>mode="a"</code> adds a line to the end of the file instead of replacing it. In this step, the connection drops during C5.'],
-   task: 'Fill in the blank so that <code>to_csv</code> adds each answer to the file. Then run the box. It runs the loop, which stops when the connection drops, and then runs the loop again. The second run skips the comments in <code>done</code>: the ones already in the file.',
-   starter: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(build_prompt(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="____", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
-   answer: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(build_prompt(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="a", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
-   errorHints: [['KeyError: .document_id.', 'labels.csv has lost its first line, with the column names. With mode="w", each answer replaces the file instead of adding to it.'],
-                 ['FileNotFoundError', 'labels.csv was never made. Check the line that skips a comment: it should be if comment_id in done.']],
-   check: {truths: [['len(pd.read_csv(path)) == 6', 'labels.csv should have six rows, one for each comment. With mode="w", each answer replaces the file instead of adding to it.'],
-                    ['pd.read_csv(path)["document_id"].is_unique', 'A comment is in labels.csv more than once. The line that skips a comment should be if comment_id in done.'],
-                    ['_sim.calls() == 7', 'The second run asked Gemini again about comments that were already saved. The line that skips a comment should be if comment_id in done.']]},
-   hint: 'The blank is <code>a</code>, for add.',
-   after: 'The first run saved C1 to C4 and stopped at C5. The second run skipped those four and asked only about C5 and C6: seven calls in all, and nothing was lost.'},
-  {topic: 'Write down what ran', stage: 'record', pre: LOOP,
-   vars: [['results', 'table', 'Gemini\'s labels from step 6']],
-   intro: 'The same codebook can give other labels with another model, other settings or on another day. So save that information with the labels.',
-   task: 'Fill in the blank with the name of the model. The next lines add the codebook version and today\'s date.',
-   starter: 'results["model"] = ____\nresults["codebook"] = "v1"\nresults["date"] = date.today().isoformat()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
-   answer: 'results["model"] = GEMINI_MODEL\nresults["codebook"] = "v1"\nresults["date"] = date.today().isoformat()\nresults.to_csv("labels_v1.csv", index=False)\nresults',
-   check: {exprs: ['results'], ordered: true, names: true},
-   hint: 'The name of the model is in <code>GEMINI_MODEL</code>.',
-   after: 'In Lab 7 you send these calls to the real Gemini, with your own key.'}
+           'Temperature 0 makes answers more alike, but not the same. If you label a dataset twice, you can get other counts, so write down the model, the settings and the date with every set of labels.']}
 ];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const STORE = 'compss211a-week07-gemini-workspace-1';
+const STORE = 'compss211a-week07-gemini-workspace-2';
 let current = 0;
 const solved = new Set();
 // tried: steps where a checked answer was wrong. An answer can be opened once the student has tried.
@@ -743,6 +731,7 @@ function renderSteps() {
     return `<section class="q" id="s${i}" aria-labelledby="s${i}-title" hidden>
       <div class="level">Step ${i + 1} of ${STEPS.length}</div>
       <h2 id="s${i}-title" tabindex="-1">${esc(s.topic)}</h2>
+      ${s.figure || ''}
       ${[].concat(s.intro || []).map(text => `<p>${text}</p>`).join('')}
       ${example}
       ${work}
