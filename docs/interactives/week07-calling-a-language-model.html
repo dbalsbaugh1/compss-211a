@@ -98,6 +98,9 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 .codebook{margin:6px 0 0;font-size:.86rem}
 .codebook dt{font-family:var(--mono);font-size:.8rem;color:var(--navy);margin-top:6px}
 .codebook dd{margin:0}
+.open-ref{display:block;margin-top:10px;padding:10px 12px;background:var(--mark);border-left:4px solid var(--gold);border-radius:4px}
+.open-ref button{margin:6px 8px 0 0}
+.reference details.flash{outline:3px solid var(--gold);outline-offset:4px;border-radius:4px}
 .comment-list{margin:6px 0 0;padding-left:0;list-style:none;font-size:.86rem}
 .comment-list li{margin:0 0 6px}
 .comment-list b{font-family:var(--mono);font-size:.8rem;color:var(--navy);margin-right:6px}
@@ -182,7 +185,9 @@ const SETUP = [
   'client = genai.Client(api_key="SIMULATED")',
   'GEMINI_MODEL = "gemini-3.5-flash-lite"',
   'SYSTEM = _sim.data()["system"]["v1"]',
-  'TEMPLATE = _sim.data()["template"]',
+  'def build_prompt(text):',
+  '    """The prompt for one comment. The task and the codebook are in SYSTEM."""',
+  '    return f"Label this comment.\\n\\nComment: {text}"',
   'LABELS = list(_sim.data()["labels"])',
   'LABEL_SCHEMA = _sim.data()["schema"]',
   'comments = {c["id"]: c["text"] for c in _sim.data()["comments"]}',
@@ -190,15 +195,15 @@ const SETUP = [
 ].join('\n');
 
 // Code that later steps load before the student's code, so a step does not depend on an earlier answer.
-const PROMPT_C1 = 'prompt = TEMPLATE.format(text=comments["C1"])';
-const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
+const PROMPT_C1 = 'prompt = build_prompt(text=comments["C1"])';
+const LOOP = 'rows = []\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["label"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)';
 const ASK_FN = "def ask(prompt):\n    wait = 10  # seconds\n    for attempt in range(4):\n        try:\n            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n            return json.loads(response.text)\n        except errors.APIError as error:\n            if error.code not in RETRY_CODES or attempt == 3:\n                raise  # stop and show the error\n            print(\"Error\", error.code, \"- waiting\", wait, \"seconds, then trying again\")\n            time.sleep(wait)\n            wait = wait * 2  # wait twice as long next time";
 const ASK = 'RETRY_CODES = {429, 503}\n\n' + ASK_FN;
 
 // The variables in the side panel. from: the first step (counted from 0) that has the variable.
 const VARIABLES = [
   {name: 'comments', kind: 'dictionary', what: 'the six comments, from ID to text'},
-  {name: 'TEMPLATE', kind: 'text', what: 'the prompt, with a <code>{text}</code> slot for one comment'},
+  {name: 'build_prompt', kind: 'function', what: 'makes the prompt for one comment: <code>build_prompt(text=...)</code>'},
   {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook', from: 2},
   {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the fields the answer must have', from: 4},
   {name: 'GEMINI_MODEL', kind: 'text', what: 'the name of the model'},
@@ -219,7 +224,7 @@ const STEPS = [
   {topic: 'Label the comments yourself', stage: 'yours',
    intro: ['Researchers often label texts by hand. They read each text and give it a label from a <b>codebook</b>: a list of the labels and what each one means. Language models can now do some of this labeling through an API. How well depends on the task, so researchers check a model\'s labels against their own before they trust them.',
            'Here you code replies to a moral dispute: someone asks strangers online whether they were wrong. The codebook asks what each comment says about who was in the wrong, not who was really in the wrong. That is labeling, not judging.',
-           'Open “The post and the codebook” and “The comments” in the side panel. Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.'],
+           'Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.<span class="open-ref">Read the post, the codebook and the comments in the side panel first:<br><button type="button" data-open-box="codebookBox">The post and the codebook</button><button type="button" data-open-box="commentsBox">The comments</button></span>'],
    task: 'Replace each <code>____</code> with one label: <code>poster_at_fault</code>, <code>poster_not_at_fault</code> or <code>unclear</code>.',
    starter: 'my_labels = {\n    "C1": "____",\n    "C2": "____",\n    "C3": "____",\n    "C4": "____",\n    "C5": "____",\n    "C6": "____",\n}\nmy_labels',
    answer: 'my_labels = {\n    "C1": "poster_at_fault",\n    "C2": "poster_not_at_fault",\n    "C3": "unclear",\n    "C4": "poster_at_fault",\n    "C5": "unclear",\n    "C6": "unclear",\n}\nmy_labels',
@@ -227,18 +232,18 @@ const STEPS = [
                     ['all(label in LABELS for label in my_labels.values())', 'Each label should be poster_at_fault, poster_not_at_fault or unclear, spelled exactly like that.']]},
    hint: 'Each value is one of the three labels, in quotation marks, such as <code>"C1": "poster_at_fault"</code>. There is no single right answer: these are your labels.',
    after: 'Step 7 puts your labels next to Gemini\'s.'},
-  {topic: 'Fill in the template', stage: 'call',
-   intro: ['You send the model a <b>prompt</b>: the text it answers. To label many comments, you write the prompt once as a <b>template</b>, with a slot for the comment, and fill the slot for each comment in turn.',
-           'The slot in <code>TEMPLATE</code> is written <code>{text}</code>. <code>.format(text=...)</code> fills the slot and gives back new text.'],
-   example: 'print(TEMPLATE)\nprint("---")\nprint("Hello, {name}!".format(name="Ana"))',
-   task: 'Run the example. Then fill in the blank to make <code>prompt</code>: <code>TEMPLATE</code> with the slot filled with comment C1.',
-   starter: 'prompt = TEMPLATE.____(text=comments["C1"])\nprint(prompt)',
-   answer: 'prompt = TEMPLATE.format(text=comments["C1"])\nprint(prompt)',
+  {topic: 'Build the prompt', stage: 'call',
+   intro: ['You send the model a <b>prompt</b>: the text it answers. To label many comments, every prompt has the same layout, and only the comment changes.',
+           '<code>build_prompt</code> makes the prompt for one comment. Its code is in the example. The task and the codebook are not in the prompt: they go in the system instruction, in the next step. Print a prompt before you send it, to see what the model will get.'],
+   example: 'def build_prompt(text):\n    """The prompt for one comment. The task and the codebook are in SYSTEM."""\n    return f"Label this comment.\\n\\nComment: {text}"\n\nprint(build_prompt(text="This is an example comment."))',
+   task: 'Run the example. Then fill in the blank to make <code>prompt</code>: the prompt for comment C1.',
+   starter: 'prompt = build_prompt(text=____)\nprint(prompt)',
+   answer: 'prompt = build_prompt(text=comments["C1"])\nprint(prompt)',
    check: {exprs: ['prompt']},
-   hint: 'The blank is <code>format</code>, as in the example.',
-   after: 'In step 6, a loop fills the template with each comment in turn.'},
+   hint: 'The blank is <code>comments["C1"]</code>, the text of comment C1.',
+   after: 'In step 6, a loop builds the prompt for each comment in turn.'},
   {topic: 'Send one call', stage: 'call', pre: PROMPT_C1,
-   vars: [['prompt', 'text', 'the template filled with C1']],
+   vars: [['prompt', 'text', 'the prompt for C1']],
    intro: ['<code>client.models.generate_content(...)</code> sends one call. It takes the name of the model, the prompt (<code>contents</code>) and the settings (<code>config</code>). The answer is in <code>response.text</code>.',
            'The <b>system instruction</b> goes in the settings. It holds the task and the codebook, and it is the same for every comment. The example sends the prompt without one.'],
    example: 'response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)\nprint(response.text)',
@@ -250,7 +255,7 @@ const STEPS = [
    hint: 'The first blank is <code>generate_content</code>. The second blank is <code>prompt</code>.',
    after: 'Without a system instruction, the model did not know which labels to use. With one, it answered with a label in its own words.'},
   {topic: 'Read the rest of the response', stage: 'call',
-   vars: [['prompt', 'text', 'the template filled with C1'], ['response', 'response', 'Gemini\'s answer to prompt, with SYSTEM']],
+   vars: [['prompt', 'text', 'the prompt for C1'], ['response', 'response', 'Gemini\'s answer to prompt, with SYSTEM']],
    pre: PROMPT_C1 + '\nresponse = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=types.GenerateContentConfig(system_instruction=SYSTEM))',
    intro: ['A response has more than the text. <code>response.usage_metadata</code> counts the <b>tokens</b>, the pieces of words a model reads and writes. <code>prompt_token_count</code> is the number of tokens sent, and <code>candidates_token_count</code> is the number in the answer.',
            'The system instruction is sent again with every call, so it is counted in every prompt. Services charge by the token.',
@@ -263,7 +268,7 @@ const STEPS = [
    hint: 'The first blank is <code>prompt_token_count</code>. The second is <code>candidates_token_count</code>.',
    after: 'Most of the tokens sent are the system instruction. A long codebook costs more for every text you label.'},
   {topic: 'Ask for JSON', stage: 'json', pre: PROMPT_C1,
-   vars: [['prompt', 'text', 'the template filled with C1']],
+   vars: [['prompt', 'text', 'the prompt for C1']],
    intro: ['An answer in the model\'s own words is hard to put in a table. A <b>schema</b> lists the fields the answer must have and the labels it may use. To see <code>LABEL_SCHEMA</code>, print it in the scratch box.',
            'Two settings ask for JSON: <code>response_mime_type="application/json"</code> and <code>response_schema=LABEL_SCHEMA</code>. The answer still comes back as text, in <code>response.text</code>. <code>json.loads</code> turns that text into a dictionary, as <code>response.json()</code> did in Week 6.'],
    task: 'Fill in the three blanks. The first passes the schema. The second turns the text into a dictionary. The third is the key that holds the label.',
@@ -274,8 +279,8 @@ const STEPS = [
    after: 'From here on, <code>CONFIG</code> holds these settings: <code>SYSTEM</code>, JSON and the schema.'},
   {topic: 'Label every comment', stage: 'all',
    intro: 'A loop sends the same system instruction with each comment in turn. <code>comments.items()</code> gives each ID with its text. Each answer becomes one row of a table.',
-   task: 'Fill in the two blanks. The first fills the template with the comment\'s text. The second is the key that holds the label.',
-   starter: 'rows = []\nfor comment_id, text in comments.items():\n    prompt = TEMPLATE.format(text=____)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["____"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)\nresults',
+   task: 'Fill in the two blanks. The first builds the prompt from the comment\'s text. The second is the key that holds the label.',
+   starter: 'rows = []\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=____)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    rows.append({"document_id": comment_id, "label": answer["____"], "reason": answer["reason"]})\nresults = pd.DataFrame(rows)\nresults',
    answer: LOOP + '\nresults',
    check: {exprs: ['results'], ordered: true, names: true},
    hint: 'The first blank is <code>text</code>, the loop variable that holds the comment. The second is <code>label</code>.',
@@ -291,8 +296,8 @@ const STEPS = [
    after: ['Neither set of labels is the right answer. Where you differ, read the comment and Gemini\'s reason again. Either one of you misread it, or the codebook does not cover it.',
            'C3 blames both people. The codebook has no rule for that, so you and the model each had to guess.']},
   {topic: 'Ask the same question again', stage: 'all',
-   vars: [['prompt', 'text', 'the template filled with C3']],
-   pre: '_sim.repeat_mode(True)\nprompt = TEMPLATE.format(text=comments["C3"])',
+   vars: [['prompt', 'text', 'the prompt for C3']],
+   pre: '_sim.repeat_mode(True)\nprompt = build_prompt(text=comments["C3"])',
    intro: ['A language model picks each word partly by chance. The <b>temperature</b> setting controls how much: 0 means as little chance as possible.',
            'The example sends the same call for C3 three times, with the default temperature.'],
    example: 'labels_default = []\nfor i in range(3):\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    labels_default.append(json.loads(response.text)["label"])\nlabels_default',
@@ -306,10 +311,10 @@ const STEPS = [
   {topic: 'Try again when the server is busy', stage: 'fail', pre: '_sim.plan({"C4": ["503", "503"]})',
    intro: ['In this step the simulated Gemini is busy the first two times you ask about C4. Run the example: the loop stops at C4 with error 503.',
            'Some errors are temporary, and the same call can work a little later: <b>429</b> (too many calls in one minute) and <b>503</b> (the server is busy). Other errors mean the request itself is wrong, and trying again gives the same error: <b>400</b> (the request is not valid) and <b>404</b> (no model has that name).'],
-   example: 'for comment_id, text in comments.items():\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=TEMPLATE.format(text=text), config=CONFIG)\n    print(comment_id, json.loads(response.text)["label"])',
+   example: 'for comment_id, text in comments.items():\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=build_prompt(text=text), config=CONFIG)\n    print(comment_id, json.loads(response.text)["label"])',
    task: '<code>ask</code> in the box sends one call. If the call fails with a code in <code>RETRY_CODES</code>, it waits and tries again. Fill in the two codes that are worth trying again.',
-   starter: 'RETRY_CODES = {____, ____}\n\n' + ASK_FN + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
-   answer: ASK + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(TEMPLATE.format(text=text))["label"]\nlabels',
+   starter: 'RETRY_CODES = {____, ____}\n\n' + ASK_FN + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(build_prompt(text=text))["label"]\nlabels',
+   answer: ASK + '\n\nlabels = {}\nfor comment_id, text in comments.items():\n    labels[comment_id] = ask(build_prompt(text=text))["label"]\nlabels',
    check: {truths: [['RETRY_CODES == {429, 503}', 'RETRY_CODES should hold the two temporary codes: too many calls in one minute, and a busy server.'],
                     ['len(labels) == 6', 'labels should have a label for all six comments.']]},
    hint: 'The two codes are <code>429</code> and <code>503</code>.',
@@ -319,8 +324,8 @@ const STEPS = [
    vars: [['ask', 'function', 'sends a prompt and tries again after a 429 or a 503, from step 9']],
    intro: 'The side panel lists <code>ask</code> from the last step. The box has a typo in the name of the model.',
    task: 'Run the box and read the error. Did <code>ask</code> try again? Then fix the name of the model so that the call works.',
-   starter: 'GEMINI_MODEL = "gemini-3.5-flash-lit"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
-   answer: 'GEMINI_MODEL = "gemini-3.5-flash-lite"\nanswer = ask(TEMPLATE.format(text=comments["C1"]))\nanswer',
+   starter: 'GEMINI_MODEL = "gemini-3.5-flash-lit"\nanswer = ask(build_prompt(text=comments["C1"]))\nanswer',
+   answer: 'GEMINI_MODEL = "gemini-3.5-flash-lite"\nanswer = ask(build_prompt(text=comments["C1"]))\nanswer',
    check: {exprs: ['answer']},
    hint: 'The name ends in <code>lite</code>: <code>"gemini-3.5-flash-lite"</code>.',
    after: 'A 404 is about the request, so <code>ask</code> stopped at once instead of waiting. Retrying would have given the same 404.'},
@@ -329,8 +334,8 @@ const STEPS = [
    intro: ['If a loop stops halfway, the answers that are only in memory are lost. So save each answer to a file as soon as you get it. A second run can then skip the comments that are already in the file.',
            '<code>mode="a"</code> adds a line to the end of the file instead of replacing it. In this step, the connection drops during C5.'],
    task: 'Fill in the blank so that <code>to_csv</code> adds each answer to the file. Then run the box. It runs the loop, which stops when the connection drops, and then runs the loop again. The second run skips the comments in <code>done</code>: the ones already in the file.',
-   starter: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="____", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
-   answer: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(TEMPLATE.format(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="a", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
+   starter: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(build_prompt(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="____", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
+   answer: 'path = Path("labels.csv")\npath.unlink(missing_ok=True)  # start without a file\n\ndef label_all():\n    done = set(pd.read_csv(path)["document_id"]) if path.exists() else set()\n    for comment_id, text in comments.items():\n        if comment_id in done:\n            continue  # labelled in an earlier run\n        answer = ask(build_prompt(text=text))\n        row = pd.DataFrame([{"document_id": comment_id, "label": answer["label"]}])\n        row.to_csv(path, mode="a", header=not path.exists(), index=False)\n        print(comment_id, "saved")\n\ntry:\n    label_all()\nexcept ConnectionError as error:\n    print("The loop stopped:", error)\n\nprint("Run it again:")\nlabel_all()\npd.read_csv(path)',
    errorHints: [['KeyError: .document_id.', 'labels.csv has lost its first line, with the column names. With mode="w", each answer replaces the file instead of adding to it.'],
                  ['FileNotFoundError', 'labels.csv was never made. Check the line that skips a comment: it should be if comment_id in done.']],
    check: {truths: [['len(pd.read_csv(path)) == 6', 'labels.csv should have six rows, one for each comment. With mode="w", each answer replaces the file instead of adding to it.'],
@@ -599,7 +604,7 @@ class _Models:
         wants_json = bool(config and config.response_mime_type == "application/json" and config.response_schema is not None)
         _SIM["last"] = {"comment": comment, "system": system, "json": wants_json, "temperature": config.temperature if config else None}
         if comment is None:
-            text = "The simulated Gemini only answers prompts that contain one of the six comments. Fill the template with a comment from comments."
+            text = "The simulated Gemini only answers prompts that contain one of the six comments. Build the prompt from a comment in comments."
             return GenerateContentResponse(text, _sim_usage(len(contents) // 4 + 1, text), "STOP")
         if system is None:
             text = "Which labels should I use? Your prompt asks me to label the comment, but it does not say what the labels are or what they mean."
@@ -868,8 +873,19 @@ async function runBox(button) {
   }
 }
 
+// Open a box in the side panel, scroll to it and mark it for a moment.
+function openBox(id) {
+  const box = $(id);
+  box.open = true;
+  box.scrollIntoView({behavior: 'smooth', block: 'start'});
+  box.classList.add('flash');
+  setTimeout(() => box.classList.remove('flash'), 1600);
+}
+
 document.addEventListener('click', e => {
   if (e.target.closest('[data-next]')) { show(current + 1); return; }
+  const open = e.target.closest('[data-open-box]');
+  if (open) { openBox(open.dataset.openBox); return; }
   const name = e.target.closest('[data-name]');
   if (name) { insertText(name.dataset.name); return; }
   const scaffold = e.target.closest('[data-scaffold]');
