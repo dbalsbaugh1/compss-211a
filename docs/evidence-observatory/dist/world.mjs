@@ -1,17 +1,17 @@
 import {Atmosphere} from './atmosphere.mjs';
-import {createPuzzle,analyze,lampPositions,sourcePositions,receiverPosition,cablePath,shutterPosition,contactPosition} from './simulation.mjs';
+import {createPuzzle,analyze,lampPositions,sourcePositions,receiverPosition,cablePath,shutterPosition,contactPosition,mechanisms,lineOfSight} from './simulation.mjs';
 // Small, dependency-free WebGL scene. All geometry and materials are made here.
 const VERTEX=`attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uProjection;uniform mat4 uView;uniform mat4 uModel;varying vec3 vNormal;varying vec3 vWorld;void main(){vec4 p=uModel*vec4(aPosition,1.);vWorld=p.xyz;vNormal=normalize(mat3(uModel)*aNormal);gl_Position=uProjection*uView*p;}`;
 const FRAGMENT=`precision mediump float;uniform vec3 uColor;uniform vec3 uCamera;uniform float uGlow;uniform vec3 uFog;uniform vec4 uLamps[8];uniform float uTime;uniform float uSurface;uniform float uOpacity;uniform float uOpen;varying vec3 vNormal;varying vec3 vWorld;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
 void main(){vec3 n=normalize(vNormal);vec3 view=normalize(uCamera-vWorld);float key=max(dot(n,normalize(vec3(-.45,.85,-.3))),0.);float fill=max(dot(n,normalize(vec3(.7,.2,.8))),0.);float stone=.91+.09*noise(vWorld.xz*3.+vWorld.y);vec3 color=uColor*(vec3(.19,.25,.34)+vec3(.5,.59,.72)*key+vec3(.22,.17,.13)*fill)*stone;
-for(int i=0;i<8;i++){vec3 delta=uLamps[i].xyz-vWorld;float distance=max(length(delta),.15);vec3 light=delta/distance;float fall=uLamps[i].w/(1.+distance*distance*.45);float diffuse=max(dot(n,light),0.);color+=uColor*vec3(1.,.64,.32)*fall*(.25+diffuse)*.9;if(uSurface>.5&&uSurface<1.5){vec3 halfVector=normalize(light+view);float shine=pow(max(dot(n,halfVector),0.),64.);color+=vec3(1.,.69,.38)*shine*fall*1.2;}}
+for(int i=0;i<8;i++){vec3 delta=uLamps[i].xyz-vWorld;float distance=max(length(delta),.15);vec3 light=delta/distance;float fall=uLamps[i].w/(1.+distance*distance*.45);float diffuse=max(dot(n,light),0.);color+=uColor*vec3(1.,.64,.32)*fall*(.25+diffuse)*.9;if((uSurface>.5&&uSurface<1.5)||uSurface>2.5){vec3 halfVector=normalize(light+view);float shine=pow(max(dot(n,halfVector),0.),64.);color+=vec3(1.,.69,.38)*shine*fall*1.2;}}
 float center=1./(1.+dot(vWorld-vec3(0.,2.4,-3.8),vWorld-vec3(0.,2.4,-3.8))*.22);color+=uColor*mix(vec3(.3,.18,.08),vec3(.12,.42,.45),uOpen)*center;
 float rim=pow(1.-max(dot(n,view),0.),3.);color+=uColor*vec3(.12,.17,.24)*rim;
 if(uSurface>.5&&uSurface<1.5){float wet=noise(vWorld.xz*.65);float fresnel=pow(1.-max(dot(n,view),0.),4.);color=mix(color,color+vec3(.075,.13,.18)*fresnel,wet*.7);}
 color=mix(color,uColor*1.27,uGlow);float density=mix(1.9,.65,clamp(vWorld.y/6.,0.,1.));float fog=1.-exp(-length(vWorld-uCamera)*.022*density);color=mix(color,uFog,fog*(1.-uGlow*.25));float alpha=uOpacity;
-if(uSurface>1.5){float cloud=noise(vWorld.xz*.32+vec2(uTime*.018,0.))*.65+noise(vWorld.xz*.85-vec2(0.,uTime*.012))*.35;float edge=(1.-smoothstep(4.,7.,abs(vWorld.x)))*(1.-smoothstep(7.,13.,abs(vWorld.z+2.)));alpha*=smoothstep(.25,.8,cloud)*edge;color=vec3(.45,.59,.67);}
+if(uSurface>1.5&&uSurface<2.5){float cloud=noise(vWorld.xz*.32+vec2(uTime*.018,0.))*.65+noise(vWorld.xz*.85-vec2(0.,uTime*.012))*.35;float edge=(1.-smoothstep(4.,7.,abs(vWorld.x)))*(1.-smoothstep(7.,13.,abs(vWorld.z+2.)));alpha*=smoothstep(.25,.8,cloud)*edge;color=vec3(.45,.59,.67);}
 gl_FragColor=vec4(color,alpha);}`;
 const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
 function perspective(fov,aspect,near,far){const f=1/Math.tan(fov/2),nf=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0]);}
@@ -54,7 +54,7 @@ export class Observatory {
   render(seconds){
     if(this.hidden)return;
     const gl=this.gl,t=this.still?0:seconds,p=this.palettes[0],c=this.camera;
-    const delta=this.lastRender?Math.min(.05,seconds-this.lastRender):0;this.lastRender=seconds;
+    const delta=this.lastRender?Math.min(.05,seconds-this.lastRender):0;this.lastRender=seconds;this.time=seconds;this.renderDelta=delta;
     const result=analyze(this.puzzle);this.aperture=this.still?Number(result.balanced):this.aperture+(Number(result.balanced)-this.aperture)*Math.min(1,delta*1.8);
     let eye,target;
     if(this.intro){const mobile=innerWidth<600,drift=this.still?0:Math.sin(t*.055)*.25;eye=mobile?[4.8,2.9,12]:[4.8+drift,3.6,12.5];target=mobile?[-1,2,-4]:[-5.9,2.4,-5];}
@@ -84,15 +84,17 @@ export class Observatory {
       if(chosen&&!this.still){const route=(t*.42)% (path.length-1),segment=Math.floor(route),k=route-segment;const point=path[segment].map((v,i)=>v+(path[segment+1][i]-v)*k);this.draw('sphere',[point[0],point[1]+.055,point[2]],[.07,.07,.07],'#fff7ce',0,0,1);}
       this.draw('cylinder',[position[0],.1,position[2]],[.4,.2,.4],'#526374');
       this.draw('cube',[position[0],.83,position[2]],[.44,1.4,.44],'#475969');
-      const lever=shutterPosition(id),contact=contactPosition(id),highlight=this.focus?.type==='lamp'&&this.focus.id===id;
+      const lever=shutterPosition(id),contact=contactPosition(id),handleCue=this.controlCue('shutter',id),contactCue=this.controlCue('contact',id);
       this.draw('cube',[position[0]-side*.24,lever[1],position[2]],[.06,.46,.28],'#263c4c');
       this.draw('sphere',lever,[.055,.055,.055],'#9d835b');
       const grip=[lever[0]-side*.1,lever[1]+(openness*2-1)*.18,lever[2]];
       this.thread(lever,grip,'#d6b57d',.055);
-      this.draw('sphere',grip,[.07,.07,.07],highlight&&this.focus.kind==='shutter'?'#fff2c7':'#d6b57d',0,0,.25);
+      this.draw('sphere',grip,[.082,.082,.082],'#e4e6d6',0,0,.09,3);
+      this.draw('ring',[grip[0]-side*.065,grip[1],grip[2]],[.052,.052,.052],'#97d8d2',side*Math.PI/2,0,.35+handleCue.light*.4);
       this.draw('cube',[contact[0],contact[1],contact[2]-.045],[.34,.3,.07],'#273d4a');
-      this.draw('ring',contact,[.14,.14,.14],highlight&&this.focus.kind==='contact'?'#fff2c7':'#b29c73',0,0,.35);
-      this.draw('sphere',[contact[0],contact[1],contact[2]+.015],[.085,.085,.045],chosen?'#e9f5d3':'#6cabb7',0,0,chosen?.9:.35);
+      this.draw('ring',contact,[.14,.14,.14],'#b29c73',0,0,.12);
+      this.draw('ring',[contact[0],contact[1],contact[2]+.007],[.108,.108,.108],'#97d8d2',0,0,.35+contactCue.light*.4);
+      this.draw('sphere',[contact[0],contact[1],contact[2]+.025-contactCue.press*.035],[.085,.085,.045],'#dce5db',0,0,.08+contactCue.press*.16,3);
       this.glyph(source,[position[0]+side*.245,.94,position[2]],.9,side*Math.PI/2,'#bcbca5');
       const rhythm=this.still?1:1+Math.sin(t*(1.2+source*.4))*.1;
       this.draw('sphere',position,[.18*rhythm,.18*rhythm,.18*rhythm],on?'#ffe0a2':'#324251',0,0,on?.8:0);
@@ -100,19 +102,23 @@ export class Observatory {
       // Two metal leaves close over the light; the nearby lever stays operable.
       for(const blade of [-1,1])this.draw('cube',[position[0]+blade*(.13+openness*.27),position[1],position[2]+.21],[.25,.48,.065],on?'#77827c':'#a59574',0,blade*.24*openness);
       if(on)this.thread(position,receiverPosition(source),analysis.counts[source]>1?'#dfb17e':'#b9e2e3',.016);
-      if(highlight)this.draw('ring',this.focus.position,[.25,.25,.25],'#fff8e0',this.focus.kind==='shutter'?side*Math.PI/2:0,0,.7);
     }
     for(let source=0;source<4;source++){
-      const pos=sourcePositions[source],selected=this.pulseSource===source||this.traceLamp!==null&&this.puzzle.wiring[this.traceLamp]===source;
+      const pos=sourcePositions[source],selected=this.pulseSource===source||this.traceLamp!==null&&this.puzzle.wiring[this.traceLamp]===source,cue=this.controlCue('well',source);
       this.draw('cylinder',[pos[0],.22,pos[2]],[.44,.44,.44],'#425667');
       this.draw('ring',[pos[0],.46,pos[2]],[.46,.46,.46],selected?'#fff2b9':'#7f9ca5',0,Math.PI/2,.6);
       this.glyph(source,[pos[0],.95,pos[2]],1.5,0,selected?'#fff1bf':'#c8cfc5');
-      this.draw('sphere',[pos[0],.53,pos[2]],[.13,.08,.13],selected?'#fff3bb':'#91bec4',0,0,1);
+      this.draw('cylinder',[pos[0],.49,pos[2]],[.17,.07,.17],'#ae966d');
+      this.draw('sphere',[pos[0],.56-cue.press*.04,pos[2]],[.13,.065,.13],'#dce5db',0,0,.08,3);
+      this.draw('ring',[pos[0],.52,pos[2]],[.16,.16,.16],'#97d8d2',0,Math.PI/2,.35+cue.light*.4);
     }
     this.draw('sphere',[0,.51,-3.8],[.45,.035,.45],this.solved?'#c8eee1':'#eab87a',0,0,1);
     this.draw('cube',[0,.8,-2.63],[.65,.55,.18],'#435968');
-    this.draw('ring',[0,1.05,-2.55],[.25,.25,.25],this.focus?.type==='receiver'?'#fff2c7':'#b9a27c',0,0,.4);
-    for(let i=-1;i<=1;i++)this.draw('cube',[i*.11,1.05,-2.53],[.025,.21,.025],'#a1c4c6',0,0,.2);
+    const listeningCue=this.controlCue('receiver',0);
+    this.draw('ring',[0,1.05,-2.55],[.25,.25,.25],'#b9a27c',0,0,.12);
+    this.draw('sphere',[0,1.05,-2.53-listeningCue.press*.025],[.2,.2,.035],'#dce5db',0,0,.08,3);
+    this.draw('ring',[0,1.05,-2.50],[.19,.19,.19],'#97d8d2',0,0,.35+listeningCue.light*.4);
+    for(let i=-1;i<=1;i++)this.draw('cube',[i*.09,1.05,-2.485],[.025,.18,.015],'#446e77',0,0,.08+listeningCue.press*.5);
     if(this.aperture>.01){
       this.draw('cube',[0,2.65,-21.5],[4.2,5.3,.03],'#274f66',0,0,.25);
       this.draw('sphere',[0,2.6,-20],[.42,.42,.42],'#e0d7af',0,0,this.aperture);
@@ -122,6 +128,10 @@ export class Observatory {
     if(this.aperture<.98){
       for(const side of [-1,1])this.draw('cube',[side*(.98+this.aperture*2),2.65,-11.9],[1.96,5.3,.15],'#243d50');
       for(let i=0;i<4;i++)this.glyph(i,[(i%2?1:-1)*(.65+this.aperture*2),1.65+Math.floor(i/2)*1.1,-11.45],1.35,0,'#b4b99f');
+      const doorCue=this.controlCue('door',0);
+      this.draw('ring',[0,1.5,-11.49],[.18,.18,.18],'#b9a27c',0,0,.12);
+      this.draw('sphere',[0,1.5,-11.46-doorCue.press*.025],[.12,.12,.045],'#dce5db',0,0,.08,3);
+      this.draw('ring',[0,1.5,-11.42],[.12,.12,.12],'#97d8d2',0,0,.35+doorCue.light*.4);
     }
     // Low haze stays translucent enough to preserve all floor-cable clues.
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
@@ -130,6 +140,15 @@ export class Observatory {
     if(this.effects){this.effects.drawDust(view,this.projection,t);this.effects.finish(this.aperture);}
 
   }
+  controlCue(kind,id){
+    this.controlMap??=new Map(mechanisms().map(control=>[control.kind+':'+control.id,control]));this.cueLevels??={};
+    const key=kind+':'+id,control=this.controlMap.get(key),eye=[this.camera.x,this.camera.y,this.camera.z],offset=control.position.map((v,i)=>v-eye[i]);
+    const reachable=!this.intro&&Math.hypot(...offset)<=2.8&&offset.reduce((n,v,i)=>n+v*control.normal[i],0)<0&&lineOfSight(eye,control.position);
+    const aimed=this.focus?.kind===kind&&this.focus.id===id,target=reachable?(aimed?1:.35):0;
+    const old=this.cueLevels[key]||0,light=this.still?target:old+(target-old)*Math.min(1,this.renderDelta*9);this.cueLevels[key]=light;
+    const press=this.press?.kind===kind&&this.press.id===id?Math.max(0,1-(this.time-this.press.at)/.3):0;
+    return {light,press:this.still?0:press};
+  }
   thread(from,to,color,width=.02){const delta=to.map((v,i)=>v-from[i]),length=Math.hypot(...delta);if(length<.001)return;this.draw('cube',from.map((v,i)=>(v+to[i])/2),[width,width,length],color,Math.atan2(delta[0],delta[2]),-Math.asin(delta[1]/length),.7);}
   glyph(source,pos,size=1,ry=0,color='#f2dbc3'){
     const map=([x,y])=>[pos[0]+Math.cos(ry)*x*size,pos[1]+y*size,pos[2]-Math.sin(ry)*x*size];
@@ -137,5 +156,5 @@ export class Observatory {
     const lines=source===1?[[[0,.22],[.19,0]],[[.19,0],[0,-.22]],[[0,-.22],[-.19,0]],[[-.19,0],[0,.22]]]:source===2?[[[-.2,0],[.2,0]],[[0,-.2],[0,.2]]]:[[[-.16,-.2],[-.16,.2]],[[0,-.2],[0,.2]],[[.16,-.2],[.16,.2]]];
     for(const [from,to]of lines)this.thread(map(from),map(to),color,.035*size);
   }
-  reset(puzzle){this.puzzle=puzzle;this.shutterOpen=puzzle.enabled.map(Number);this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
+  reset(puzzle){this.press=null;this.cueLevels={};this.puzzle=puzzle;this.shutterOpen=puzzle.enabled.map(Number);this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
 }

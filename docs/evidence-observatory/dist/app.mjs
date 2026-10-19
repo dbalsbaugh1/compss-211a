@@ -19,7 +19,7 @@ function mouseUI(){
 function captureFailure(error){
   if(error?.message)console.warn('Mouse capture:',error.message);
   captureUnavailable=error?.name==='SecurityError'||error?.name==='NotSupportedError';
-  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click a mechanism to use it. Drag to look around.');
+  clearInput();mouseUI();
 }
 function requestMouse(){
   if(!playing||guided||textMode||$('#settings').open||!canCaptureMouse()||document.pointerLockElement===$('#world'))return;
@@ -28,11 +28,10 @@ function requestMouse(){
 function rotateLook(x,y){if(!world)return;world.camera.yaw+=x*.0028;world.camera.pitch=Math.max(-1,Math.min(.8,world.camera.pitch-y*.0025));}
 function aimUI(){
   const free=pointer&&document.pointerLockElement!==$('#world');document.body.classList.toggle('free-pointer',Boolean(free));
-  if(free){document.body.style.setProperty('--aim-x',pointer.x+'px');document.body.style.setProperty('--aim-y',pointer.y+'px');}
 }
 document.addEventListener('pointerlockchange',()=>{clearInput();pointer=null;suppressClick=true;mouseUI();aimUI();});
 document.addEventListener('pointerlockerror',captureFailure);
-function say(text){$('#announcer').textContent=text;$('#whisper').textContent=text;captionUntil=elapsed+8;$('#whisper').classList.add('visible');}
+function say(text,duration=8,entryGoal=false){$('#whisper').classList.toggle('entry-goal',entryGoal);$('#announcer').textContent=text;$('#whisper').textContent=text;captionUntil=elapsed+duration;$('#whisper').classList.add('visible');}
 function pairNames(source){return puzzle.wiring.flatMap((s,i)=>s===source?[lampNames[i]]:[]).join(' and ');}
 function describe(){
   if(!focus)return;
@@ -59,7 +58,6 @@ function sync(){
   const label=!focus?'Approach a mechanism':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Lower shutter lever':'Raise shutter lever'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
   $('#action-label').textContent=label;$('#interact').disabled=!focus;
   $('#trace').hidden=focus?.type!=='lamp';
-  $('#target-label').textContent=focus?.kind?focus.name:'';$('#target-label').hidden=!focus?.kind||textMode;
   document.body.classList.toggle('has-target',Boolean(focus?.kind));
   $('#world').classList.toggle('mechanism-hover',Boolean(focus?.kind));
   if(textMode)describe();
@@ -74,11 +72,12 @@ function start(){
   const seed=crypto.getRandomValues(new Uint32Array(1))[0];puzzle=createPuzzle(seed);playing=true;finished=false;ending=false;focus=null;traced=null;pulsed=null;hintCount=0;knownSources=new Set();clearInput();
   $('#intro').hidden=true;$('#ending').hidden=true;$('#hud').hidden=false;$('#restart').hidden=false;$('#hint-text').textContent='';
   if(world){world.intro=false;world.reset(puzzle);}if(guided||textMode)visit(12);else sync();
-  say('The beam is bright. The doorway stays shut.');mouseUI();requestMouse();
+  say('Open the far door by making all four patterns in the central ring steady.',14,true);mouseUI();requestMouse();
 }
 function act(){
   if(!playing||ending||$('#settings').open||!focus)return;
   clearInput();
+  if(world)world.press={kind:focus.kind||(focus.type==='lamp'?'shutter':focus.type==='source'?'well':focus.type),id:focus.id,at:elapsed};
   if(focus.type==='lamp'&&focus.kind==='contact'){trace();return;}
   if(focus.type==='lamp'){
     const before=analyze(puzzle);puzzle=toggleLamp(puzzle,focus.id);audio.switch(puzzle.enabled[focus.id]);const after=analyze(puzzle);
@@ -92,7 +91,7 @@ function act(){
   }else if(analyze(puzzle).balanced){end();return;}else say('Four empty outlines in the door. The receiver hums behind you.');
   sync();
 }
-function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('The contact sends a pulse down its cable.');sync();}
+function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;if(world)world.press={kind:'contact',id:focus.id,at:elapsed};audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('The contact sends a pulse down its cable.');sync();}
 function end(){if(ending)return;releaseMouse();ending=true;playing=false;finished=true;clearInput();$('#transition').classList.add('active');setTimeout(()=>{$('#hud').hidden=true;$('#ending').hidden=false;if(world)world.intro=true;$('#ending').focus({preventScroll:true});$('#transition').classList.remove('active');window.scrollTo(0,0);},still?0:330);}
 function pick(at=pointer){
   if(!world)return null;
