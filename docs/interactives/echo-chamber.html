@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#10283b">
+  <meta name="description" content="An exploratory first-person light puzzle. Follow hidden cables, experiment with lamps, and find a steady beam. Inspired by Berkeley COMPSS 211A.">
+  <title>The Evidence Observatory</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500&display=swap');
+:root{--ink:#e9e1ce;--muted:#a9bbc4;--paper:#192e40;--brass:#d5b57d;--line:#91a7b333;font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:#0d2031;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;min-height:100svh}button,a,input,select{-webkit-tap-highlight-color:transparent}button{font:inherit;color:inherit;cursor:pointer;border:0}button:disabled{cursor:default}a{color:inherit;text-underline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6d69e;outline-offset:5px}button[hidden],[hidden]{display:none!important}h1,h2,h3,p{margin-top:0}h1,h2,h3{font-family:'Space Grotesk',Arial,sans-serif}
+#world{position:fixed;inset:0;width:100%;height:100%;touch-action:none}.grain{position:fixed;inset:0;pointer-events:none;opacity:.025;z-index:1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.5' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
+#transition{position:fixed;inset:0;background:#0d2031;opacity:0;pointer-events:none;z-index:15;transition:opacity .5s}#transition.active{opacity:1}.still #transition{transition:none}
+.topbar{position:absolute;top:0;left:0;right:0;padding:30px 42px;display:flex;justify-content:space-between;align-items:center;z-index:5;gap:20px;background:linear-gradient(#0a1d3180,transparent);text-shadow:0 2px 15px #06131d}.wordmark{display:flex;gap:12px;align-items:center;text-decoration:none;font-size:13px;font-weight:500;line-height:1.15;letter-spacing:-.3px;color:#e1d4b7}.wordmark svg{width:41px;height:41px;fill:none;stroke:#bc9c69;stroke-width:1.25}.wordmark circle{fill:#d6b57c;stroke:none}.top-actions{display:flex;gap:23px;align-items:center;font-size:11px;font-weight:400}.top-actions button{padding:8px 0;border-bottom:1px solid #a7b9c45c;background:transparent;color:#c7d1d2}.top-actions button:hover{color:#f5d6a0;border-color:#d5b57d}.course-tag{padding:8px 12px;border:1px solid var(--line);border-radius:20px;color:#a3b7c2;font-size:10px}
+.intro{position:relative;z-index:2;min-height:100svh;pointer-events:none;display:flex;align-items:center;padding:115px 7vw 110px;background:linear-gradient(90deg,#081a2ce0 0%,#0b2034a6 36%,#0b203400 73%)}.intro-content{width:min(650px,54vw)}.intro a,.intro button{pointer-events:auto}.edition{font-size:11px;font-weight:400;letter-spacing:.04em;margin:0 0 27px;display:flex;align-items:center;gap:10px;color:#b3b5a9}.edition:before{content:'';display:block;width:5px;height:5px;border-radius:50%;background:#d8b77d;box-shadow:0 0 13px #e8c18a88}.intro h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(82px,10.8vw,158px);font-weight:400;line-height:.83;letter-spacing:-.055em;margin:0 0 32px;color:#f0e4cb;text-shadow:0 4px 30px #06172544}.lede{font-size:clamp(14px,1.2vw,17px);line-height:1.8;color:#b2c2ca;margin-bottom:29px;max-width:420px}.button{display:inline-flex;align-items:center;justify-content:space-between;gap:25px;min-height:50px;padding:14px 20px;border-radius:3px;font-size:13px;font-weight:500;text-decoration:none;transition:background .2s,border-color .2s}.button.dark{background:#d4bb8c;color:#172c3b}.button.dark:hover{background:#ebd6ae}.button.light{background:#1d384aab;border:1px solid #66808e66;color:#d2ddd9}.button.light:hover{border-color:#c3a873}.button span{font-size:19px;font-weight:400;line-height:1}.start-actions{display:flex;align-items:flex-start;gap:13px;flex-direction:column}.start-actions>span{font-size:10px;color:#8fa6b4}.intro-details{display:flex;gap:45px;margin-top:40px;border-top:1px solid var(--line);padding-top:20px;max-width:350px;font-size:10px;color:#8da7b6}.intro-details b{display:block;margin-bottom:6px;color:#c8cfc8;font-size:11px;font-weight:500}.intro-footer{position:absolute;bottom:23px;left:42px;right:42px;display:flex;justify-content:space-between;font-size:10px;color:#8ca3b3;gap:25px}.intro-footer p{margin:0}.intro-footer p:last-child{display:flex;gap:20px;align-items:center}.intro-footer span{font-size:22px;color:#ad916a}.scene-caption{position:absolute;right:8%;bottom:20%;display:flex;align-items:center;gap:14px;font-size:10px;line-height:1.7;color:#a5b8c0}.scene-caption p{margin:0}.scene-caption b{font-weight:400;color:#c6c9bb}.caption-line{display:block;width:60px;height:1px;background:#b3986c77;position:relative}.caption-line:before{content:'';position:absolute;width:5px;height:5px;border:1px solid #be9e6b;border-radius:50%;left:0;top:-2px}
+#hud{position:fixed;inset:0;z-index:3;pointer-events:none}.chapter{position:absolute;left:42px;top:120px;text-shadow:0 2px 15px #06131d}.chapter>div{font-size:10px;color:#9bb1bd;margin-bottom:9px}.chapter h1{font-size:23px;font-weight:400;letter-spacing:-.7px;margin-bottom:13px;color:#d9ddcf}.room-state{font-size:10px;color:#b3b8a6;margin:0}.movement-help{position:absolute;bottom:24px;left:42px;display:flex;align-items:center;gap:12px;font-size:9px;color:#a3b8c3}.movement-help>span{display:flex;gap:4px;align-items:center}kbd{font:10px 'DM Sans',sans-serif;border:1px solid #748e9d77;padding:3px 5px;border-radius:3px;background:#142c3aaa;min-width:20px;text-align:center;color:#cdd5ce}.world-note{display:none}#reticle{position:absolute;left:50%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border:1px solid #c8d8db77;border-radius:50%;display:grid;place-items:center}#reticle span{width:2px;height:2px;background:#e5e4cf;border-radius:50%}#target-label{position:absolute;top:calc(50% + 24px);left:50%;transform:translateX(-50%);padding:7px 11px;font-size:10px;border-radius:3px;background:#112636db;border:1px solid #7d97a533;color:#e1ded0;white-space:nowrap}
+.interaction{position:absolute;left:50%;bottom:23px;transform:translateX(-50%);pointer-events:auto;display:flex;gap:8px;max-width:calc(100vw - 24px);white-space:normal}.interaction button{display:flex;align-items:center;gap:10px;min-height:43px;padding:9px 15px;background:#112a3ae8;border:1px solid #b4986f66;border-radius:24px;box-shadow:0 3px 24px #030e1755;font-size:12px;font-weight:400;white-space:nowrap;backdrop-filter:blur(8px)}.interaction button:hover{background:#234052;border-color:#c5a778}.interaction button:disabled{opacity:.6;cursor:default;border-color:#66829366}.interaction kbd{background:#294251;border-color:#65818e;min-width:23px;font-size:11px;color:#e9d6b0}.whisper{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);max-width:min(560px,80vw);width:max-content;margin:0;font-size:14px;line-height:1.7;text-align:center;color:#e1d8c2;text-shadow:0 2px 7px #04121d,0 0 20px #04121d;opacity:0;transition:opacity .7s;pointer-events:none}.whisper.visible{opacity:1}.touch-controls{display:none;pointer-events:auto;position:absolute;right:20px;bottom:115px;grid-template-columns:repeat(3,42px);gap:6px}.touch-controls button{width:42px;height:42px;background:#163345dd;border:1px solid #7b8c8e77;border-radius:5px;font-size:22px;touch-action:none;user-select:none}.touch-controls button:active{background:#536c74}.guided-navigation{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;max-width:calc(100vw - 30px)}.guided-navigation button,.guided-navigation select{border:1px solid #768b8d99;background:#142f42ed;border-radius:4px;font:12px 'DM Sans',sans-serif;color:#d8d8c9;min-height:36px;padding:6px 10px}.guided-navigation select{max-width:235px}.guided .whisper{bottom:145px}
+.scene-description{position:absolute;left:50%;top:210px;transform:translateX(-50%);width:min(520px,calc(100% - 50px));max-height:calc(100svh - 360px);overflow-y:auto;pointer-events:auto}.scene-description h2{font-size:30px;font-weight:400;letter-spacing:-1px}.scene-description p{font-size:15px;line-height:1.8;color:#bccbd0}#clue-text{padding-top:14px;border-top:1px solid #90a6b14d}.text-mode #world,.text-mode .grain,.text-mode #reticle,.text-mode #target-label,.text-mode .scene-caption,.text-mode .whisper{display:none}.text-mode{background:radial-gradient(ellipse at 72% 52%,#274352,#10283b 80%)}.text-mode .movement-help,.guided .movement-help,.guided .touch-controls{display:none}
+dialog{border:1px solid #68828d77;box-shadow:0 20px 100px #020d17aa;border-radius:8px;width:min(600px,calc(100% - 32px));max-height:90svh;overflow-y:auto;padding:34px;background:#192f40;color:#e6ddc6}dialog::backdrop{background:#04152199;backdrop-filter:blur(9px)}.close{position:absolute;right:15px;top:12px;background:transparent;font-size:27px;width:35px;height:35px;border-radius:50%;color:#b6c7cb}.close:hover{background:#2c4658}.eyebrow{font-size:11px;color:#b9a584;margin-bottom:13px;padding-right:20px}dialog h2{font-size:31px;letter-spacing:-1px;font-weight:400;margin:0 20px 12px 0;line-height:1.15}dialog p{font-size:14px;line-height:1.65;color:#b6c6cd}.setting{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0;border-top:1px solid var(--line)}.setting b{font-size:13px;font-weight:500}.setting small{display:block;font-size:12px;line-height:1.6;color:#a7bcc7;margin-top:5px;max-width:380px}.setting input{accent-color:#d7bb86;width:22px;height:22px;flex-shrink:0}.controls-copy{border-top:1px solid var(--line);padding-top:17px;margin-bottom:20px}.controls-copy b{font-size:13px;font-weight:500}.controls-copy p{font-size:12px;margin:8px 0}.hint-request{display:block;background:none;text-decoration:underline;text-underline-offset:3px;font-size:12px;padding:8px 0;margin-bottom:8px;color:#d7bd91}#hint-text{font-size:13px;line-height:1.65}
+.ending{position:relative;z-index:3;min-height:100svh;padding:125px 7vw 50px;background:linear-gradient(90deg,#0b2335f5,#0b2335d9 54%,#0b233555)}.ending-content{max-width:770px}.ending h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(48px,6vw,86px);font-weight:400;line-height:.96;letter-spacing:-.045em;margin-bottom:27px}.ending-claim{font-family:'Space Grotesk',sans-serif;font-size:clamp(18px,2vw,24px);line-height:1.45;max-width:660px}.ending-copy{font-size:14px;line-height:1.8;max-width:620px;color:#b2c4ce}.receipts{display:flex;gap:25px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;margin:26px 0;max-width:710px}.receipts>div{flex:1}.receipts b{font-size:12px;font-weight:500;color:#d6c3a0}.receipts p{font-size:11px;line-height:1.7;margin:5px 0 0;color:#a6bdc9}.lesson{font-size:16px;line-height:1.7;margin-bottom:24px}.lesson strong{font-weight:500}.ending-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.ending-actions>a{font-size:12px;margin-left:8px;color:#bbccc9}.end-note{display:block;margin-top:27px;font-size:10px;color:#89a7b6;line-height:1.6}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(min-width:1600px){.intro-content{padding-left:2vw}.intro-details{margin-top:50px}}
+@media(max-width:1000px){.movement-help{display:none}.topbar{padding:24px 26px}.course-tag{display:none}.top-actions{gap:18px}.chapter{left:26px;top:108px}.whisper{bottom:122px;font-size:13px}.intro-footer{left:26px;right:26px}.scene-caption{right:5%;bottom:23%}.ending{padding:115px 7vw 40px}}
+@media(pointer:coarse){.touch-controls{display:grid}.movement-help{display:none}}
+@media(max-width:600px){.topbar{padding:20px}.wordmark{font-size:11px;gap:8px}.wordmark svg{width:32px;height:32px}.top-actions{font-size:9px;gap:12px}.intro{align-items:flex-start;padding:140px 25px 130px;background:linear-gradient(90deg,#081c2ecc,#0a23355e 74%);min-height:100svh}.intro-content{width:100%}.edition{font-size:10px;margin-bottom:26px}.intro h1{font-size:clamp(82px,22vw,116px);margin-bottom:30px}.lede{font-size:14px;max-width:290px}.start-actions{margin-top:27px}.start-actions .button{font-size:12px;min-height:48px}.start-actions>span{font-size:9px}.intro-details{margin-top:30px;gap:30px;max-width:300px;font-size:9px}.intro-details b{font-size:10px}.scene-caption{display:none}.intro-footer{left:25px;right:25px;bottom:20px;font-size:9px;gap:20px}.intro-footer p:last-child{max-width:120px;text-align:right;line-height:1.6;gap:9px}.chapter{left:20px;top:96px}.chapter h1{font-size:21px;margin-bottom:11px}.chapter>div,.room-state{font-size:9px}.interaction{gap:6px}.interaction button{font-size:11px;padding:9px 12px;gap:6px;min-height:44px}.interaction kbd{font-size:10px;min-width:19px}.whisper{bottom:140px;font-size:13px;max-width:calc(100vw - 44px)}.guided .whisper{bottom:145px}.touch-controls{right:15px;bottom:180px;grid-template-columns:repeat(3,36px);gap:4px}.touch-controls button{width:36px;height:38px;font-size:19px}.guided-navigation{bottom:82px}.guided-navigation select{max-width:220px}#target-label{font-size:9px}.scene-description{top:210px}.scene-description h2{font-size:25px}.scene-description p{font-size:14px}dialog{padding:28px 21px;max-height:88svh}dialog h2{font-size:28px}dialog p{font-size:13px}.ending{padding:118px 25px 35px}.ending h1{font-size:55px}.ending-claim{font-size:19px}.ending-copy{font-size:13px}.receipts{gap:13px;padding:15px 0;margin:21px 0}.receipts b{font-size:11px}.receipts p{font-size:10px}.lesson{font-size:14px}.ending-actions{gap:10px}.ending-actions .button{font-size:12px;min-height:45px;padding:12px 16px}.ending-actions>a{margin:7px 0 0;flex-basis:100%}.end-note{font-size:9px}}
+@media(max-height:760px) and (min-width:601px){.intro{padding-top:105px;padding-bottom:80px}.intro h1{font-size:108px}.intro-details{margin-top:25px}.edition{margin-bottom:20px}.lede{margin-bottom:20px}.chapter{top:104px}.ending{padding-top:105px}.ending h1{font-size:64px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.look-hint{position:absolute;right:42px;bottom:27px;margin:0;font-size:9px;color:#a3b8c3;pointer-events:none}.mouse-captured #world{cursor:none}.mouse-captured .top-actions{opacity:.3;pointer-events:none}.mouse-captured .interaction{pointer-events:none}.mouse-captured .chapter{opacity:.65}.text-mode .look-hint,.guided .look-hint{display:none}@media(max-width:600px),(pointer:coarse){.look-hint{display:none}}
+
+</style>
+
+</head>
+<body>
+  <canvas id="world" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <div id="transition" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="wordmark" href="#" aria-label="The Evidence Observatory home"><svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="20" rx="18" ry="7"/><ellipse cx="20" cy="20" rx="7" ry="18" transform="rotate(35 20 20)"/><circle cx="20" cy="20" r="3"/></svg><span>The Evidence<br>Observatory</span></a>
+    <div class="top-actions"><button id="sound-button" aria-pressed="true">Sound on</button><button id="settings-button" aria-label="Open accessibility and controls">Controls & access</button><button id="restart" hidden>Restart</button><span class="course-tag">A COMPSS 211A game</span></div>
+  </header>
+
+  <main id="intro" class="intro">
+    <div class="intro-content"><p class="edition">The observatory, after dark</p><h1>The echo<br>chamber.</h1><p class="lede">An abandoned observatory. A restless beam.<br>The far door is waiting.</p><div class="start-actions"><button class="button dark" id="start">Enter the observatory <span aria-hidden="true">↗</span></button><span>Explore at your own pace. Headphones optional.</span></div><div class="intro-details"><span><b>One room</b>A puzzle to work out</span><span><b>No timer</b>Experiment at your own pace</span></div></div>
+    <div class="scene-caption" aria-hidden="true"><span class="caption-line"></span><p>The listening machine<br><b>Still searching for a clear signal</b></p></div>
+    <div class="intro-footer"><p>Inspired by Berkeley’s <a href="https://github.com/macss-berkeley/compss-211a" target="_blank" rel="noopener">Computing I</a></p><p>Keyboard, touch, or guided play <span aria-hidden="true">✳</span></p></div>
+  </main>
+
+  <section id="hud" hidden aria-label="Game controls">
+    <div class="chapter"><div>The observatory</div><h1>The echo chamber</h1><p class="room-state" id="room-state">The doorway is sealed</p></div>
+    <div id="reticle" aria-hidden="true"><span></span></div><div id="target-label" aria-hidden="true" hidden></div>
+    <p id="whisper" class="whisper" aria-hidden="true"></p>
+    <div class="interaction"><button id="interact"><kbd aria-hidden="true">E</kbd> <span id="action-label">Look toward an object</span></button><button id="trace" hidden><kbd aria-hidden="true">Q</kbd><span>Trace cable</span></button></div>
+    <div class="guided-navigation" id="guided-navigation" hidden><button id="previous-place" aria-label="Previous landmark">←</button><select id="place" aria-label="Explore a landmark"></select><button id="next-place" aria-label="Next landmark">→</button></div>
+    <div id="scene-description" class="scene-description" hidden tabindex="-1"><h2 id="scene-title"></h2><p id="scene-text"></p><p id="clue-text"></p></div>
+    <div class="movement-help" id="movement-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span><span><kbd>←</kbd><kbd>→</kbd> turn</span><span><kbd>E</kbd> switch / inspect</span><span><kbd>Q</kbd> trace</span><span>Mouse to look</span><span><kbd>Esc</kbd> cursor</span></div>
+    <div class="touch-controls" id="touch-controls" aria-label="Movement"><button data-control="ArrowLeft" aria-label="Turn left">↶</button><button data-control="w" aria-label="Move forward">↑</button><button data-control="ArrowRight" aria-label="Turn right">↷</button><button data-control="a" aria-label="Move left">←</button><button data-control="s" aria-label="Move backward">↓</button><button data-control="d" aria-label="Move right">→</button></div>
+    <p class="look-hint" id="look-status"></p>
+    <p class="world-note">Follow the connections. Experiment. Undo anything.</p>
+  </section>
+
+  <dialog id="settings" aria-labelledby="settings-title"><form method="dialog"><button class="close" aria-label="Close settings">×</button></form><p class="eyebrow">Make yourself comfortable</p><h2 id="settings-title">Your way through.</h2><p>There’s no timer, combat, or penalty for trying again.</p><label class="setting"><span><b>Explore without walking</b><small>Choose individual landmarks. The puzzle and choices stay the same.</small></span><input type="checkbox" id="guided"></label><label class="setting"><span><b>Capture mouse</b><small>Hide the cursor and look freely during mouse play. Escape releases it. Switch off for drag controls.</small></span><input type="checkbox" id="capture-mouse" checked></label><label class="setting"><span><b>Still world</b><small>Stop pulsing and idle motion. Static shapes and cable routes still reveal the connections.</small></span><input type="checkbox" id="still"></label><label class="setting"><span><b>Room sound</b><small>A quiet hum, resonant switches, and footsteps. Every puzzle clue also has a visual form.</small></span><input type="checkbox" id="sound-enabled" checked></label><label class="setting"><span><b>Text view</b><small>Hide the 3D scene. Play the same investigation in text.</small></span><input type="checkbox" id="text-mode"></label><div class="controls-copy"><b>Explore at your own pace</b><p>WASD to move. Left/right arrows to turn. R/F to look up or down. Move the mouse to look; Escape releases the cursor for menus. Click the scene to resume. Touch uses dragging. Walk close to a lamp and look at it. E or Space switches it. Q traces its cable. The central receiver and the wells can also be inspected. Escape closes settings. Every action has a labeled button.</p></div><button class="hint-request" id="hint">Ask for a small nudge</button><p id="hint-text" role="status"></p><button class="button dark" id="settings-done">Back to the observatory</button></dialog>
+
+  <section id="ending" class="ending" hidden tabindex="-1" aria-labelledby="ending-title"><div class="ending-content"><p class="edition">The doorway opens</p><h1 id="ending-title">Less light.<br>A clearer signal.</h1><p class="ending-claim">The room is quieter. Every source is still there.</p><p class="ending-copy">Each source reached the receiver once. More lamps had made the beam brighter, but some repeated what was already there. You kept every source and removed the repetition. In research, two reports that copy the same source are not two independent confirmations.</p><div class="receipts"><div><b>Shared origins</b><p>Cables and markings revealed shared origins.</p></div><div><b>Real consequences</b><p>Every switch changed the real circuit.</p></div><div><b>Your solution</b><p>Which lamps to keep was yours to work out.</p></div></div><p class="lesson">A result is a starting point.<br><strong>Check the evidence before you trust it.</strong></p><div class="ending-actions"><button class="button dark" id="again">Explore again <span aria-hidden="true">↗</span></button><button class="button light" id="download">Save field notes</button><a href="https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week13_final-presentations/course_synthesis_and_next_steps.md" target="_blank" rel="noopener">Back to the course ↗</a></div><small class="end-note">Different wiring each time. Several valid solutions. A real research habit. Inspired by COMPSS 211A at UC Berkeley.</small></div></section>
+  <p id="announcer" class="sr-only" aria-live="polite" role="status"></p>
+  <noscript>This game needs JavaScript. Its central lesson: check the data, read the errors, and make a claim your evidence supports.</noscript>
+<script type="module">
+// The cables, pulses, receiver, and win condition all use this same circuit.
+const lampPositions=[[-3.9,1.5,4.3],[-3.9,1.5,.7],[-3.9,1.5,-3],[-3.9,1.5,-6.5],[3.9,1.5,4.3],[3.9,1.5,.7],[3.9,1.5,-3],[3.9,1.5,-6.5]];
+const lampNames=['West entrance lamp','West middle lamp','West rear lamp','West alcove lamp','East entrance lamp','East middle lamp','East rear lamp','East alcove lamp'];
+const sourcePositions=[[-4.2,.55,-9.3],[-1.4,.55,-9.3],[1.4,.55,-9.3],[4.2,.55,-9.3]];
+const sourceNames=['Hollow circle','Diamond','Cross','Three bars'];
+function createPuzzle(seed=1){
+  let n=seed>>>0;const rand=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};
+  let wiring;
+  do{wiring=[0,0,1,1,2,2,3,3];for(let i=7;i>0;i--){const j=Math.floor(rand()*(i+1));[wiring[i],wiring[j]]=[wiring[j],wiring[i]];}}
+  while(new Set(wiring.slice(0,4)).size!==3||new Set(wiring.slice(4)).size!==3);
+  return {wiring,enabled:Array(8).fill(true),seed};
+}
+function analyze(puzzle){
+  const counts=Array(4).fill(0);puzzle.wiring.forEach((source,i)=>{if(puzzle.enabled[i])counts[source]++;});
+  return {counts,repeated:counts.filter(v=>v>1).length,missing:counts.filter(v=>v===0).length,active:puzzle.enabled.filter(Boolean).length,balanced:counts.every(v=>v===1)};
+}
+function toggleLamp(puzzle,id){if(!Number.isInteger(id)||id<0||id>7)return puzzle;return {...puzzle,enabled:puzzle.enabled.map((on,i)=>i===id?!on:on)};}
+function receiverPosition(source){const a=source*Math.PI/2+Math.PI/4;return [Math.cos(a)*1.05,2.45+Math.sin(a)*1.05,-3.8];}
+function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [[p[0],.025,p[2]],[lane,.025,p[2]],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+function canStand(x,z){
+  if(x< -6.3||x>6.3||z< -11.2||z>8.2)return false;
+  if(Math.hypot(x,z+3.8)<1.65)return false;
+  if(z> -8.03&&z< -7.17&&(x> -5.12&&x< -.38||x>.38&&x<5.12))return false;
+  if(lampPositions.some(p=>Math.hypot(x-p[0],z-p[2])<.48))return false;
+  if(sourcePositions.some(p=>Math.hypot(x-p[0],z-p[2])<.48))return false;
+  return true;
+}
+function landmarks(){return [
+  ...lampPositions.map((p,id)=>({type:'lamp',id,name:lampNames[id],position:p,stand:[p[0]-Math.sign(p[0])*1.2,1.7,p[2]+1]})),
+  ...sourcePositions.map((p,id)=>({type:'source',id,name:sourceNames[id]+' well',position:p,stand:[p[0],1.7,-8.4]})),
+  {type:'receiver',id:0,name:'Central receiver',position:[0,1.5,-3.8],stand:[0,1.7,-.9]},
+  {type:'door',id:0,name:'Far doorway',position:[0,1.5,-11.5],stand:[0,1.7,-10.2]}
+];}
+function lineOfSight(from,to){
+  // The source niches cannot be inspected through their opaque screens.
+  for(const cx of [-2.75,2.75]){
+    const low=[cx-2.2,0,-7.775],high=[cx+2.2,3,-7.425];let enter=0,exit=1;
+    for(let axis=0;axis<3;axis++){
+      const delta=to[axis]-from[axis];
+      if(Math.abs(delta)<1e-9){if(from[axis]<low[axis]||from[axis]>high[axis]){enter=2;break;}}
+      else{let a=(low[axis]-from[axis])/delta,b=(high[axis]-from[axis])/delta;if(a>b)[a,b]=[b,a];enter=Math.max(enter,a);exit=Math.min(exit,b);}
+    }
+    if(enter<=exit&&exit>=0&&enter<=1)return false;
+  }
+  return true;
+}
+
+// Procedural sky, suspended dust, and a restrained bloom pass. No external assets.
+const SCREEN_VERTEX=`attribute vec2 aPosition;varying vec2 vUV;void main(){vUV=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
+const SKY_FRAGMENT=`precision mediump float;varying vec2 vUV;uniform float uAspect;uniform float uYaw;uniform float uPitch;uniform float uTime;uniform float uOpen;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){vec3 r=normalize(vec3((vUV.x-.5)*1.1547*uAspect,(vUV.y-.5)*1.1547,-1.));r=vec3(r.x,r.y*cos(uPitch)-r.z*sin(uPitch),r.y*sin(uPitch)+r.z*cos(uPitch));r=vec3(cos(uYaw)*r.x-sin(uYaw)*r.z,r.y,sin(uYaw)*r.x+cos(uYaw)*r.z);
+float h=clamp(r.y*.9+.25,0.,1.);vec3 color=mix(vec3(.23,.34,.43),vec3(.025,.055,.11),smoothstep(0.,.75,h));color+=vec3(.08,.075,.06)*pow(1.-abs(r.y),12.);
+vec2 p=r.xz/(abs(r.y)+.25)*85.;vec2 cell=floor(p);vec2 f=fract(p)-.5;float star=step(.985,hash(cell))*pow(max(0.,1.-length(f)*3.5),5.)*smoothstep(.03,.4,r.y);color+=vec3(.7,.79,.91)*star*(.8+.12*sin(uTime*.25+hash(cell)*20.));color+=vec3(.012,.04,.035)*uOpen;gl_FragColor=vec4(color,1.);}`;
+const BLUR_FRAGMENT=`precision mediump float;varying vec2 vUV;uniform sampler2D uImage;uniform vec2 uDirection;uniform float uExtract;
+vec3 sampleLight(vec2 p){vec3 c=texture2D(uImage,p).rgb;return mix(c,max(c-vec3(.64),0.)*2.3,uExtract);}
+void main(){vec3 c=sampleLight(vUV)*.227027;c+=(sampleLight(vUV+uDirection*1.3846)+sampleLight(vUV-uDirection*1.3846))*.316216;c+=(sampleLight(vUV+uDirection*3.23077)+sampleLight(vUV-uDirection*3.23077))*.07027;gl_FragColor=vec4(c,1.);}`;
+const FINAL_FRAGMENT=`precision mediump float;varying vec2 vUV;uniform sampler2D uScene;uniform sampler2D uBloom;uniform float uOpen;
+void main(){vec3 c=texture2D(uScene,vUV).rgb+texture2D(uBloom,vUV).rgb*.62;float vignette=1.-smoothstep(.22,.85,length((vUV-.5)*vec2(1.,.88)))*.38;float grain=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5;c=pow(max(c,vec3(0.)),vec3(.96))*vignette+grain*.006;c+=vec3(.003,.009,.008)*uOpen;gl_FragColor=vec4(c,1.);}`;
+const DUST_VERTEX=`attribute vec3 aPosition;uniform mat4 uView;uniform mat4 uProjection;uniform float uTime;uniform float uScale;varying float vAlpha;
+void main(){vec3 p=aPosition;p.x+=sin(uTime*.08+p.z)*.18;p.y+=sin(uTime*.12+p.x*2.)*.12;vec4 view=uView*vec4(p,1.);gl_Position=uProjection*view;gl_PointSize=clamp(uScale*13./max(1.,-view.z),1.,5.);vAlpha=clamp(1.-(-view.z)/24.,0.,1.)*.26;}`;
+const DUST_FRAGMENT=`precision mediump float;varying float vAlpha;void main(){float d=length(gl_PointCoord-.5)*2.;float a=pow(max(0.,1.-d),3.)*vAlpha;gl_FragColor=vec4(.86,.82,.67,a);}`;
+function program(gl,vertex,fragment){const result=gl.createProgram();for(const [type,src]of [[gl.VERTEX_SHADER,vertex],[gl.FRAGMENT_SHADER,fragment]]){const shader=gl.createShader(type);gl.shaderSource(shader,src);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));gl.attachShader(result,shader);}gl.linkProgram(result);if(!gl.getProgramParameter(result,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(result));return result;}
+class Atmosphere {
+  constructor(gl){this.gl=gl;this.sky=program(gl,SCREEN_VERTEX,SKY_FRAGMENT);this.blur=program(gl,SCREEN_VERTEX,BLUR_FRAGMENT);this.final=program(gl,SCREEN_VERTEX,FINAL_FRAGMENT);this.dust=program(gl,DUST_VERTEX,DUST_FRAGMENT);this.quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);this.particles=gl.createBuffer();const points=[];let seed=19;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};for(let i=0;i<180;i++)points.push((rand()-.5)*12,.5+rand()*7,rand()*22-14);gl.bindBuffer(gl.ARRAY_BUFFER,this.particles);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(points),gl.STATIC_DRAW);this.targets=[];}
+  uniform(p,name){return this.gl.getUniformLocation(p,name);}
+  screen(p){const gl=this.gl;gl.useProgram(p);gl.disable(gl.DEPTH_TEST);gl.bindBuffer(gl.ARRAY_BUFFER,this.quad);const a=gl.getAttribLocation(p,'aPosition');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);}
+  target(w,h,depth=false){const gl=this.gl,texture=gl.createTexture(),buffer=gl.createFramebuffer();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);for(const [key,value]of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,key,value);gl.bindFramebuffer(gl.FRAMEBUFFER,buffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);let renderbuffer;if(depth){renderbuffer=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,renderbuffer);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,renderbuffer);}if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw Error('Atmosphere framebuffer unavailable');return {texture,buffer,renderbuffer,w,h};}
+  resize(w,h){if(this.width===w&&this.height===h)return;this.width=w;this.height=h;const gl=this.gl;for(const t of this.targets){gl.deleteTexture(t.texture);gl.deleteFramebuffer(t.buffer);if(t.renderbuffer)gl.deleteRenderbuffer(t.renderbuffer);}this.targets=[this.target(w,h,true),this.target(Math.max(1,w>>2),Math.max(1,h>>2)),this.target(Math.max(1,w>>2),Math.max(1,h>>2))];gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
+  begin(eye,target,time,open){const gl=this.gl,p=this.sky,delta=target.map((v,i)=>v-eye[i]);gl.bindFramebuffer(gl.FRAMEBUFFER,this.targets[0].buffer);gl.viewport(0,0,this.width,this.height);gl.clearColor(.03,.06,.1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);this.screen(p);gl.uniform1f(this.uniform(p,'uAspect'),this.width/this.height);gl.uniform1f(this.uniform(p,'uYaw'),Math.atan2(delta[0],-delta[2]));gl.uniform1f(this.uniform(p,'uPitch'),Math.atan2(delta[1],Math.hypot(delta[0],delta[2])));gl.uniform1f(this.uniform(p,'uTime'),time);gl.uniform1f(this.uniform(p,'uOpen'),open);gl.drawArrays(gl.TRIANGLES,0,6);gl.enable(gl.DEPTH_TEST);}
+  drawDust(view,projection,time){const gl=this.gl,p=this.dust;gl.useProgram(p);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);gl.bindBuffer(gl.ARRAY_BUFFER,this.particles);const a=gl.getAttribLocation(p,'aPosition');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,0,0);gl.uniformMatrix4fv(this.uniform(p,'uView'),false,view);gl.uniformMatrix4fv(this.uniform(p,'uProjection'),false,projection);gl.uniform1f(this.uniform(p,'uTime'),time);gl.uniform1f(this.uniform(p,'uScale'),Math.min(devicePixelRatio||1,1.5));gl.drawArrays(gl.POINTS,0,180);gl.depthMask(true);gl.disable(gl.BLEND);}
+  finish(open){const gl=this.gl,[scene,a,b]=this.targets,p=this.blur;this.screen(p);gl.activeTexture(gl.TEXTURE0);gl.uniform1i(this.uniform(p,'uImage'),0);gl.bindFramebuffer(gl.FRAMEBUFFER,a.buffer);gl.viewport(0,0,a.w,a.h);gl.bindTexture(gl.TEXTURE_2D,scene.texture);gl.uniform2f(this.uniform(p,'uDirection'),1/scene.w,0);gl.uniform1f(this.uniform(p,'uExtract'),1);gl.drawArrays(gl.TRIANGLES,0,6);gl.bindFramebuffer(gl.FRAMEBUFFER,b.buffer);gl.bindTexture(gl.TEXTURE_2D,a.texture);gl.uniform2f(this.uniform(p,'uDirection'),0,1/a.h);gl.uniform1f(this.uniform(p,'uExtract'),0);gl.drawArrays(gl.TRIANGLES,0,6);gl.bindFramebuffer(gl.FRAMEBUFFER,a.buffer);gl.bindTexture(gl.TEXTURE_2D,b.texture);gl.uniform2f(this.uniform(p,'uDirection'),1/a.w,0);gl.drawArrays(gl.TRIANGLES,0,6);gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,this.width,this.height);this.screen(this.final);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,scene.texture);gl.uniform1i(this.uniform(this.final,'uScene'),0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,a.texture);gl.uniform1i(this.uniform(this.final,'uBloom'),1);gl.uniform1f(this.uniform(this.final,'uOpen'),open);gl.drawArrays(gl.TRIANGLES,0,6);gl.activeTexture(gl.TEXTURE0);}
+}
+
+// A quiet, synthesized acoustic space. Sound is optional and starts on a gesture.
+class ChamberSound {
+  constructor(){this.enabled=true;this.voices=[];this.ready=false;}
+  async start(){
+    if(!this.enabled)return;const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw Error('Audio unavailable');
+    if(this.ready){await this.context.resume();return;}
+    const c=this.context=new Audio();this.master=c.createGain();this.master.gain.value=.15;this.master.connect(c.destination);
+    const room=c.createConvolver(),length=Math.floor(c.sampleRate*2.8),impulse=c.createBuffer(2,length,c.sampleRate);for(let channel=0;channel<2;channel++){const a=impulse.getChannelData(channel);for(let i=0;i<length;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/length,3)*.55;}room.buffer=impulse;const wet=c.createGain();wet.gain.value=.3;room.connect(wet);wet.connect(this.master);this.reverb=room;
+    for(let source=0;source<4;source++){const oscillator=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner();oscillator.type='sine';oscillator.frequency.value=[110,138.59,164.81,220][source];gain.gain.value=0;oscillator.connect(gain);gain.connect(pan);pan.connect(this.master);gain.connect(room);oscillator.start();this.voices.push({oscillator,gain,pan});}
+    const noise=c.createBuffer(1,c.sampleRate*3,c.sampleRate),a=noise.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;const air=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();air.buffer=noise;air.loop=true;filter.type='lowpass';filter.frequency.value=230;gain.gain.value=.075;air.connect(filter);filter.connect(gain);gain.connect(this.master);air.start();this.ready=true;await c.resume();
+  }
+  setEnabled(value){this.enabled=value;if(this.ready)this.master.gain.setTargetAtTime(value?.15:0,this.context.currentTime,.15);}
+  update(counts,camera){if(!this.ready)return;const t=this.context.currentTime;for(let i=0;i<4;i++){const v=this.voices[i],count=counts[i];v.gain.gain.setTargetAtTime(count===0?0:count===1?.045:.075,t,.6);v.oscillator.frequency.setTargetAtTime([110,138.59,164.81,220][i]+(count>1?1.8:0),t,.8);v.pan.pan.setTargetAtTime(Math.sin(i*Math.PI/2-(camera?.yaw||0))*.55,t,.15);}}
+  tone(frequency,duration=.3,level=.15,type='sine'){if(!this.ready||!this.enabled)return;const c=this.context,t=c.currentTime,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(frequency,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(this.master);g.connect(this.reverb);o.start();o.stop(t+duration+.05);}
+  switch(on){this.tone(on?330:165,.22,.1,'triangle');}
+  pulse(source){this.tone([220,277.18,329.63,440][source],1.8,.18);}
+  unlock(){for(const [i,f]of [220,277.18,329.63,440].entries())setTimeout(()=>this.tone(f,3,.16),i*130);}
+  footstep(){this.tone(52+Math.random()*10,.12,.035,'triangle');}
+}
+
+// Small, dependency-free WebGL scene. All geometry and materials are made here.
+const VERTEX=`attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uProjection;uniform mat4 uView;uniform mat4 uModel;varying vec3 vNormal;varying vec3 vWorld;void main(){vec4 p=uModel*vec4(aPosition,1.);vWorld=p.xyz;vNormal=normalize(mat3(uModel)*aNormal);gl_Position=uProjection*uView*p;}`;
+const FRAGMENT=`precision mediump float;uniform vec3 uColor;uniform vec3 uCamera;uniform float uGlow;uniform vec3 uFog;uniform vec4 uLamps[8];uniform float uTime;uniform float uSurface;uniform float uOpacity;uniform float uOpen;varying vec3 vNormal;varying vec3 vWorld;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+void main(){vec3 n=normalize(vNormal);vec3 view=normalize(uCamera-vWorld);float key=max(dot(n,normalize(vec3(-.45,.85,-.3))),0.);float fill=max(dot(n,normalize(vec3(.7,.2,.8))),0.);float stone=.91+.09*noise(vWorld.xz*3.+vWorld.y);vec3 color=uColor*(vec3(.19,.25,.34)+vec3(.5,.59,.72)*key+vec3(.22,.17,.13)*fill)*stone;
+for(int i=0;i<8;i++){vec3 delta=uLamps[i].xyz-vWorld;float distance=max(length(delta),.15);vec3 light=delta/distance;float fall=uLamps[i].w/(1.+distance*distance*.45);float diffuse=max(dot(n,light),0.);color+=uColor*vec3(1.,.64,.32)*fall*(.25+diffuse)*.9;if(uSurface>.5&&uSurface<1.5){vec3 halfVector=normalize(light+view);float shine=pow(max(dot(n,halfVector),0.),64.);color+=vec3(1.,.69,.38)*shine*fall*1.2;}}
+float center=1./(1.+dot(vWorld-vec3(0.,2.4,-3.8),vWorld-vec3(0.,2.4,-3.8))*.22);color+=uColor*mix(vec3(.3,.18,.08),vec3(.12,.42,.45),uOpen)*center;
+float rim=pow(1.-max(dot(n,view),0.),3.);color+=uColor*vec3(.12,.17,.24)*rim;
+if(uSurface>.5&&uSurface<1.5){float wet=noise(vWorld.xz*.65);float fresnel=pow(1.-max(dot(n,view),0.),4.);color=mix(color,color+vec3(.075,.13,.18)*fresnel,wet*.7);}
+color=mix(color,uColor*1.27,uGlow);float density=mix(1.9,.65,clamp(vWorld.y/6.,0.,1.));float fog=1.-exp(-length(vWorld-uCamera)*.022*density);color=mix(color,uFog,fog*(1.-uGlow*.25));float alpha=uOpacity;
+if(uSurface>1.5){float cloud=noise(vWorld.xz*.32+vec2(uTime*.018,0.))*.65+noise(vWorld.xz*.85-vec2(0.,uTime*.012))*.35;float edge=(1.-smoothstep(4.,7.,abs(vWorld.x)))*(1.-smoothstep(7.,13.,abs(vWorld.z+2.)));alpha*=smoothstep(.25,.8,cloud)*edge;color=vec3(.45,.59,.67);}
+gl_FragColor=vec4(color,alpha);}`;
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+function perspective(fov,aspect,near,far){const f=1/Math.tan(fov/2),nf=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0]);}
+function lookAt(eye,target){let z=eye.map((a,i)=>a-target[i]),l=Math.hypot(...z);z=z.map(x=>x/l);let x=[z[2],0,-z[0]];l=Math.hypot(...x);x=x.map(v=>v/l);const y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-x.reduce((a,v,i)=>a+v*eye[i],0),-y.reduce((a,v,i)=>a+v*eye[i],0),-z.reduce((a,v,i)=>a+v*eye[i],0),1]);}
+function model(x,y,z,sx,sy,sz,ry=0,rx=0){const c=Math.cos(ry),s=Math.sin(ry),a=Math.cos(rx),b=Math.sin(rx);return new Float32Array([c*sx,0,-s*sx,0,s*b*sy,a*sy,c*b*sy,0,s*a*sz,-b*sz,c*a*sz,0,x,y,z,1]);}
+function cube(){let p=[],n=[];const faces=[[[1,0,0],[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5],[.5,-.5,.5]],[[-1,0,0],[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5],[-.5,-.5,-.5]],[[0,1,0],[-.5,.5,-.5],[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5]],[[0,-1,0],[-.5,-.5,.5],[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5]],[[0,0,1],[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]],[[0,0,-1],[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]]];for(const [normal,...vs] of faces)for(const i of [0,1,2,0,2,3]){p.push(...vs[i]);n.push(...normal);}return {p,n};}
+function sphere(segments=32,rings=20){let p=[],n=[];const point=(u,v)=>[Math.sin(v)*Math.cos(u),Math.cos(v),Math.sin(v)*Math.sin(u)];for(let j=0;j<rings;j++)for(let i=0;i<segments;i++){const a=point(i/segments*Math.PI*2,j/rings*Math.PI),b=point((i+1)/segments*Math.PI*2,j/rings*Math.PI),c=point((i+1)/segments*Math.PI*2,(j+1)/rings*Math.PI),d=point(i/segments*Math.PI*2,(j+1)/rings*Math.PI);for(const v of [a,b,c,a,c,d]){p.push(...v);n.push(...v);}}return {p,n};}
+function torus(major=1,minor=.1,segments=72,sides=10,half=false){let p=[],n=[];const point=(u,v)=>({p:[(major+minor*Math.cos(v))*Math.cos(u),(major+minor*Math.cos(v))*Math.sin(u),minor*Math.sin(v)],n:[Math.cos(v)*Math.cos(u),Math.cos(v)*Math.sin(u),Math.sin(v)]});for(let i=0;i<segments;i++)for(let j=0;j<sides;j++){const u=i/segments*Math.PI*(half?1:2),v=j/sides*Math.PI*2,du=Math.PI*(half?1:2)/segments,dv=Math.PI*2/sides;const a=point(u,v),b=point(u+du,v),c=point(u+du,v+dv),d=point(u,v+dv);for(const q of [a,b,c,a,c,d]){p.push(...q.p);n.push(...q.n);}}return {p,n};}
+function cylinder(segments=48){let p=[],n=[];for(let i=0;i<segments;i++){const a=i/segments*Math.PI*2,b=(i+1)/segments*Math.PI*2,x=Math.cos(a),z=Math.sin(a),xx=Math.cos(b),zz=Math.sin(b);for(const [v,normal] of [[[x,-.5,z],[x,0,z]],[[xx,-.5,zz],[xx,0,zz]],[[xx,.5,zz],[xx,0,zz]],[[x,-.5,z],[x,0,z]],[[xx,.5,zz],[xx,0,zz]],[[x,.5,z],[x,0,z]],[[0,.5,0],[0,1,0]],[[x,.5,z],[0,1,0]],[[xx,.5,zz],[0,1,0]],[[0,-.5,0],[0,-1,0]],[[xx,-.5,zz],[0,-1,0]],[[x,-.5,z],[0,-1,0]]]){p.push(...v);n.push(...normal);}}return {p,n};}
+
+class Observatory {
+  constructor(canvas){this.canvas=canvas;this.camera={x:0,y:1.7,z:6.8,yaw:0,pitch:0};this.room=0;this.puzzle=createPuzzle(1);this.traceLamp=null;this.pulseSource=null;this.focus=null;this.solved=false;this.intro=true;this.still=false;this.hidden=false;this.time=0;this.aperture=0;this.lastRender=0;this.gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'low-power'});if(!this.gl)throw Error('3D rendering unavailable');const gl=this.gl;const shader=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};this.program=gl.createProgram();gl.attachShader(this.program,shader(gl.VERTEX_SHADER,VERTEX));gl.attachShader(this.program,shader(gl.FRAGMENT_SHADER,FRAGMENT));gl.linkProgram(this.program);if(!gl.getProgramParameter(this.program,gl.LINK_STATUS))throw Error('Could not create scene');gl.useProgram(this.program);this.u={};for(const name of ['Projection','View','Model','Color','Camera','Glow','Fog','Time','Surface','Opacity','Open'])this.u[name]=gl.getUniformLocation(this.program,'u'+name);this.u.Lamps=gl.getUniformLocation(this.program,'uLamps[0]');try{this.effects=new Atmosphere(gl);}catch{this.effects=null;}this.position=gl.getAttribLocation(this.program,'aPosition');this.normal=gl.getAttribLocation(this.program,'aNormal');this.meshes={};for(const [key,geometry]of Object.entries({cube:cube(),sphere:sphere(),torus:torus(),ring:torus(1,.025),arch:torus(1,.17,48,10,true),rib:torus(1,.025,48,8,true),cylinder:cylinder()})){const pos=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pos);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(geometry.p),gl.STATIC_DRAW);const norm=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,norm);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(geometry.n),gl.STATIC_DRAW);this.meshes[key]={pos,norm,count:geometry.p.length/3};}gl.enable(gl.DEPTH_TEST);this.resize();this.build();}
+  resize(){const ratio=Math.min(devicePixelRatio||1,1.5);const w=Math.round(innerWidth*ratio),h=Math.round(innerHeight*ratio);if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}this.gl.viewport(0,0,w,h);this.projection=perspective(Math.PI/3,w/h,.1,140);if(this.effects)try{this.effects.resize(w,h);}catch{this.effects=null;}}
+  build(){this.objects=[];const add=(mesh,pos,scale,color,ry=0,rx=0,glow=0,surface=0)=>this.objects.push({mesh,pos,scale,color:hex(color),ry,rx,glow,surface});const box=(x,y,z,w,h,d,color,ry=0,surface=0)=>add('cube',[x,y,z],[w,h,d],color,ry,0,0,surface);const ink='#354556',floor='#344456';
+    box(0,-.23,-15,150,.4,150,floor,0,1);
+    // A tiled plaza, long colonnades, and an open sky establish a readable space.
+    for(let i=-15;i<=15;i++){box(i*2,-.021,-15,.016,.008,80,'#405363');box(0,-.02,i*2-15,80,.008,.016,'#405363');}
+    for(const side of [-1,1]){box(side*7.5,.15,-5,2.4,.35,32,'#263a4c');box(side*7.5,6.9,-5,2.4,.4,32,'#31485c');for(let z=7;z>=-20;z-=4.6){box(side*7.5,3.5,z,.72,6.7,.72,'#455669');box(side*7.5,.45,z,1.2,.25,1.2,'#33485b');box(side*7.5,6.5,z,1.08,.3,1.08,'#4d5f70');box(side*7.08,3.5,z+.4,.04,5.7,.04,'#6c7f87');}}
+    // The exit is an architectural arch; its center lights up after verification.
+    box(-3.7,2.8,-12,3.3,5.6,.8,ink);box(3.7,2.8,-12,3.3,5.6,.8,ink);box(0,6.25,-12,10.7,1.3,.8,ink);add('arch',[0,3.5,-11.5],[2.1,2.1,1],'#aa805e');box(-2.1,1.75,-11.5,.34,3.5,.34,'#aa805e');box(2.1,1.75,-11.5,.34,3.5,.34,'#aa805e');box(0,.05,-11,4.6,.1,3.4,'#3b4f5e');
+    // Long shadows make the geometry feel physical without external assets.
+    for(const side of [-1,1])for(let z=6;z>=-12;z-=4.6)box(side*4.7,-.004,z-1,5.5,.006,.7,'#213345',-.35);
+    for(let z=5;z>=-8;z-=1.8){box(0,.005,z,.035,.008,.5,'#62685e');}
+    // Central evidence pedestal and concentric inspection marks.
+    add('cylinder',[0,.17,-3.8],[1.75,.34,1.75],'#3d5261');add('cylinder',[0,.4,-3.8],[1.5,.16,1.5],'#627477');add('cylinder',[0,.73,-3.8],[1.15,.5,1.15],'#2d404f');add('ring',[0,.012,-3.8],[2.2,2.2,2.2],'#9e7d5c',0,Math.PI/2);add('ring',[0,.016,-3.8],[2.45,2.45,2.45],'#535f64',0,Math.PI/2);
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;box(Math.cos(a)*2.7,.014,-3.8+Math.sin(a)*2.7,.08,.012,.24,'#987b57',-a);}
+    // Distant observatory towers, a suspended sun, and shallow steps.
+    add('sphere',[0,9.5,-32],[5.1,5.1,5.1],'#e1cbb0',0,0,.7);add('ring',[0,9.5,-31.8],[6.1,6.1,6.1],'#d9aa73',.2,.2);
+    for(const side of [-1,1]){box(side*14,4,-26,5,8,5,'#273c52');box(side*21,6,-38,6,12,6,'#23384b');add('sphere',[side*14,9.6,-26],[1.2,1.2,1.2],'#7f9aa9');for(let i=0;i<3;i++)box(side*4,.1+i*.12,-14-i*.6,3,.2,.7,'#304558');}
+    for(const side of [-1,1]){add('sphere',[side*4.9,1.08,-7.6],[.22,.22,.22],'#f9cd91',0,0,1);box(side*4.9,.5,-7.6,.1,1,.1,'#536570');}
+    for(const side of [-1,1]){box(side*2.75,1.5,-7.6,4.4,3,.35,'#354959');box(side*2.75,3.03,-7.6,4.55,.08,.45,'#718184');}
+    // Vault ribs and a broken celestial instrument give the hall its scale.
+    for(const z of [6,0,-6,-12,-18]){add('arch',[0,6.5,z],[7.5,7.5,.8],'#34495e');add('rib',[0,6.5,z+.22],[7.5,7.5,.4],'#8d8068',0,0,.05);}
+    for(const side of [-1,1])for(let z=4;z>=-14;z-=6){box(side*5.8,5.6,z,.025,2,.025,'#af9774');add('sphere',[side*5.8,4.55,z],[.065,.065,.065],'#e8ba80',0,0,1);}
+    add('sphere',[.7,9.9,-30.6],[4.9,4.9,4.9],'#142c42',0,0,1);
+    for(const radius of [3.2,4.1])add('ring',[0,-.006,-3.8],[radius,radius,radius],'#6a827f',0,Math.PI/2,.1);
+    this.palettes=[{artifact:'#c5a06e',fog:'#243e53',detail:'#899d9e'}];
+  }
+  draw(mesh,pos,scale,color,ry=0,rx=0,glow=0,surface=0,opacity=1){const gl=this.gl,m=this.meshes[mesh];if(this.lastMesh!==mesh){gl.bindBuffer(gl.ARRAY_BUFFER,m.pos);gl.enableVertexAttribArray(this.position);gl.vertexAttribPointer(this.position,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,m.norm);gl.enableVertexAttribArray(this.normal);gl.vertexAttribPointer(this.normal,3,gl.FLOAT,false,0,0);this.lastMesh=mesh;}gl.uniformMatrix4fv(this.u.Model,false,model(...pos,...scale,ry,rx));gl.uniform3fv(this.u.Color,Array.isArray(color)?color:hex(color));gl.uniform1f(this.u.Glow,glow);gl.uniform1f(this.u.Surface,surface);gl.uniform1f(this.u.Opacity,opacity);gl.drawArrays(gl.TRIANGLES,0,m.count);}
+  render(seconds){
+    if(this.hidden)return;
+    const gl=this.gl,t=this.still?0:seconds,p=this.palettes[0],c=this.camera;
+    const delta=this.lastRender?Math.min(.05,seconds-this.lastRender):0;this.lastRender=seconds;
+    const result=analyze(this.puzzle);this.aperture=this.still?Number(result.balanced):this.aperture+(Number(result.balanced)-this.aperture)*Math.min(1,delta*1.8);
+    let eye,target;
+    if(this.intro){const mobile=innerWidth<600,drift=this.still?0:Math.sin(t*.055)*.25;eye=mobile?[4.8,2.9,12]:[4.8+drift,3.6,12.5];target=mobile?[-1,2,-4]:[-5.9,2.4,-5];}
+    else{eye=[c.x,c.y+(this.still?0:this.walkBob||0),c.z];target=[c.x+Math.sin(c.yaw)*Math.cos(c.pitch),eye[1]+Math.sin(c.pitch),c.z-Math.cos(c.yaw)*Math.cos(c.pitch)];}
+    const view=lookAt(eye,target),fog=hex(p.fog);
+    if(this.effects)this.effects.begin(eye,target,t,this.aperture);else{gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.clearColor(...fog,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);}
+    gl.useProgram(this.program);gl.uniformMatrix4fv(this.u.Projection,false,this.projection);gl.uniformMatrix4fv(this.u.View,false,view);gl.uniform3fv(this.u.Camera,eye);gl.uniform3fv(this.u.Fog,fog);gl.uniform1f(this.u.Time,t);gl.uniform1f(this.u.Open,this.aperture);
+    const lights=[];for(let id=0;id<8;id++)lights.push(...lampPositions[id],this.puzzle.enabled[id]?1.3:.06);gl.uniform4fv(this.u.Lamps,lights);
+    this.lastMesh=null;for(const o of this.objects)this.draw(o.mesh,o.pos,o.scale,o.color,o.ry,o.rx,o.glow,o.surface);
+    const analysis=analyze(this.puzzle);this.solved=analysis.balanced;
+    this.draw('torus',[0,2.4,-3.8],[2.5,2.5,2.5],this.solved?'#a1dbe1':'#b18a65',0,0,.05);
+    this.draw('ring',[0,2.4,-3.8],[2.85,2.85,2.85],p.detail,.22,0,.2);
+    this.draw('ring',[0,2.4,-3.8],[2.75,2.75,2.75],'#9d8059',this.still?.3:.3+Math.sin(t*.07)*.18,.48,.2);
+    this.draw('ring',[0,2.4,-3.8],[3.02,3.02,3.02],'#596d78',-.15,Math.PI/2.6,.1);
+    for(let i=0;i<4;i++){
+      const position=receiverPosition(i),count=analysis.counts[i],pulse=this.still?1:1+Math.sin(t*(1.2+i*.4))*.035;
+      this.glyph(i,position,.95,0,count===0?'#566c7e':count===1?'#b7eee1':'#edb17c');
+      if(count===1)this.draw('ring',position,[.38,.38,.38],'#b7eee1',0,0,.8);
+      if(count>1){for(let j=0;j<count;j++){const offset=this.still?(j-.5)*.12:Math.sin(t*3+j*Math.PI)*.1;this.draw('ring',[position[0]+offset,position[1],position[2]+j*.04],[.38*pulse,.38*pulse,.38],j%2?'#e4816f':'#f4cea3',0,0,.5);}this.draw('cube',position,[.055,.55,.055],'#b6677b',.4,.7);}
+    }
+    for(let id=0;id<8;id++){
+      const position=lampPositions[id],source=this.puzzle.wiring[id],on=this.puzzle.enabled[id],side=Math.sign(position[0]);
+      const chosen=this.traceLamp===id||this.pulseSource===source;
+      const path=cablePath(this.puzzle,id);
+      for(let k=1;k<path.length;k++)this.thread(path[k-1],path[k],chosen?'#e1b56c':'#5a7183',chosen?.045:.014);
+      if(chosen&&!this.still){const route=(t*.42)% (path.length-1),segment=Math.floor(route),k=route-segment;const point=path[segment].map((v,i)=>v+(path[segment+1][i]-v)*k);this.draw('sphere',[point[0],point[1]+.055,point[2]],[.07,.07,.07],'#fff7ce',0,0,1);}
+      this.draw('cylinder',[position[0],.1,position[2]],[.4,.2,.4],'#526374');
+      this.draw('cube',[position[0],.83,position[2]],[.44,1.4,.44],'#475969');
+      this.draw('cube',[position[0]-side*.28,1.05,position[2]],[.16,.3,.15],on?'#d7b87a':'#354552',0,on?-.35:.35);
+      this.glyph(source,[position[0]+side*.245,.94,position[2]],.9,side*Math.PI/2,'#bcbca5');
+      const rhythm=this.still?1:1+Math.sin(t*(1.2+source*.4))*.1;
+      this.draw('sphere',position,[.18*rhythm,.18*rhythm,.18*rhythm],on?'#ffe0a2':'#324251',0,0,on?.8:0);
+      this.draw('ring',position,[.3,.3,.3],chosen?'#ffffff':on?'#e8b779':'#5d737f',0,0,.4);
+      if(on)this.thread(position,receiverPosition(source),analysis.counts[source]>1?'#dfb17e':'#b9e2e3',.016);
+      if(this.focus?.type==='lamp'&&this.focus.id===id)this.draw('ring',position,[.39,.39,.39],'#fff8e0',0,0,1);
+    }
+    for(let source=0;source<4;source++){
+      const pos=sourcePositions[source],selected=this.pulseSource===source||this.traceLamp!==null&&this.puzzle.wiring[this.traceLamp]===source;
+      this.draw('cylinder',[pos[0],.22,pos[2]],[.44,.44,.44],'#425667');
+      this.draw('ring',[pos[0],.46,pos[2]],[.46,.46,.46],selected?'#fff2b9':'#7f9ca5',0,Math.PI/2,.6);
+      this.glyph(source,[pos[0],.95,pos[2]],1.5,0,selected?'#fff1bf':'#c8cfc5');
+      this.draw('sphere',[pos[0],.53,pos[2]],[.13,.08,.13],selected?'#fff3bb':'#91bec4',0,0,1);
+    }
+    this.draw('sphere',[0,.51,-3.8],[.45,.035,.45],this.solved?'#c8eee1':'#eab87a',0,0,1);
+    if(this.aperture>.01){
+      this.draw('cube',[0,2.65,-21.5],[4.2,5.3,.03],'#274f66',0,0,.25);
+      this.draw('sphere',[0,2.6,-20],[.42,.42,.42],'#e0d7af',0,0,this.aperture);
+      this.draw('ring',[0,2.6,-11.35],[1.5,1.5,1.5],'#d7eee0',0,0,this.aperture);
+      for(let i=0;i<7;i++)this.draw('ring',[0,2.6,-11.7-i*1.25],[1.5,1.5,1.5],i%2?'#7299a5':'#a6d6d0',0,0,.65);
+    }
+    if(this.aperture<.98){
+      for(const side of [-1,1])this.draw('cube',[side*(.98+this.aperture*2),2.65,-11.9],[1.96,5.3,.15],'#243d50');
+      for(let i=0;i<4;i++)this.glyph(i,[(i%2?1:-1)*(.65+this.aperture*2),1.65+Math.floor(i/2)*1.1,-11.45],1.35,0,'#b4b99f');
+    }
+    // Low haze stays translucent enough to preserve all floor-cable clues.
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    for(const height of [.12,.38])this.draw('cube',[0,height,-2],[14,.004,26],'#7c9baa',0,0,0,2,.09);
+    gl.depthMask(true);gl.disable(gl.BLEND);
+    if(this.effects){this.effects.drawDust(view,this.projection,t);this.effects.finish(this.aperture);}
+
+  }
+  thread(from,to,color,width=.02){const delta=to.map((v,i)=>v-from[i]),length=Math.hypot(...delta);if(length<.001)return;this.draw('cube',from.map((v,i)=>(v+to[i])/2),[width,width,length],color,Math.atan2(delta[0],delta[2]),-Math.asin(delta[1]/length),.7);}
+  glyph(source,pos,size=1,ry=0,color='#f2dbc3'){
+    const map=([x,y])=>[pos[0]+Math.cos(ry)*x*size,pos[1]+y*size,pos[2]-Math.sin(ry)*x*size];
+    if(source===0){this.draw('ring',pos,[.19*size,.19*size,.19*size],color,ry,0,.7);return;}
+    const lines=source===1?[[[0,.22],[.19,0]],[[.19,0],[0,-.22]],[[0,-.22],[-.19,0]],[[-.19,0],[0,.22]]]:source===2?[[[-.2,0],[.2,0]],[[0,-.2],[0,.2]]]:[[[-.16,-.2],[-.16,.2]],[[0,-.2],[0,.2]],[[.16,-.2],[.16,.2]]];
+    for(const [from,to]of lines)this.thread(map(from),map(to),color,.035*size);
+  }
+  reset(puzzle){this.puzzle=puzzle;this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
+}
+
+const fieldNotes=`The Echo Chamber\nA first-person puzzle inspired by COMPSS 211A: Computing I.\n\nThe doorway responded to the sources represented in the beam, rather than its brightness. Two lamps could carry the very same source. Removing a repeated contribution reduced the glow but improved the signal. Removing the only contribution from another source left a gap.\n\nThe lesson is a research habit: trace where observations come from before treating them as independent evidence. A larger-looking result can contain repeated information.\n\nThe physical cables, shared markings, pulse rhythms, and receiver behavior all describe the same underlying circuit. The wiring changes when you start again. You can make mistakes, undo them, and find several valid solutions.\n\nCourse: https://github.com/macss-berkeley/compss-211a\n`;
+
+const $=s=>document.querySelector(s),keys=new Set(),places=landmarks(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const audio=new ChamberSound();
+let audioLast=0,stepDistance=0,captureMouse=true,captureUnavailable=false;
+let world,puzzle,playing=false,finished=false,guided=false,still=reduced.matches,textMode=false,drag=null,last=0,elapsed=0,captionUntil=0,focus=null,placeIndex=12,traced=null,pulsed=null,hintCount=0,ending=false,knownSources=new Set();
+try{world=new Observatory($('#world'));}catch{textMode=true;document.body.classList.add('text-mode');$('#text-mode').checked=true;$('#text-mode').disabled=true;$('#text-mode').closest('label').querySelector('small').textContent='3D is unavailable here. Explore the same circuit in text.';}
+$('#still').checked=still;
+$('#place').innerHTML=places.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('');
+function clearInput(){keys.clear();drag=null;}
+function releaseMouse(){if(document.pointerLockElement===($('#world')))document.exitPointerLock();}
+function canCaptureMouse(){return captureMouse&&!captureUnavailable&&matchMedia('(pointer:fine)').matches&&typeof $('#world').requestPointerLock==='function';}
+function mouseUI(){
+  const locked=document.pointerLockElement===$('#world');document.body.classList.toggle('mouse-captured',locked);
+  $('#look-status').textContent=locked?'Esc releases the cursor':canCaptureMouse()?'Click scene to capture mouse':'Drag to look';
+}
+function captureFailure(error){
+  if(error?.message)console.warn('Mouse capture:',error.message);
+  captureUnavailable=error?.name==='SecurityError'||error?.name==='NotSupportedError';
+  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click inside the scene to capture the mouse. You can also drag to look.');
+}
+function requestMouse(){
+  if(!playing||guided||textMode||$('#settings').open||!canCaptureMouse()||document.pointerLockElement===$('#world'))return;
+  try{const request=$('#world').requestPointerLock();if(request&&typeof request.catch==='function')request.catch(captureFailure);}catch{captureFailure();}
+}
+function rotateLook(x,y){if(!world)return;world.camera.yaw+=x*.0028;world.camera.pitch=Math.max(-1,Math.min(.8,world.camera.pitch-y*.0025));}
+document.addEventListener('pointerlockchange',()=>{clearInput();mouseUI();});
+document.addEventListener('pointerlockerror',captureFailure);
+function say(text){$('#announcer').textContent=text;$('#whisper').textContent=text;captionUntil=elapsed+8;$('#whisper').classList.add('visible');}
+function pairNames(source){return puzzle.wiring.flatMap((s,i)=>s===source?[lampNames[i]]:[]).join(' and ');}
+function describe(){
+  if(!focus)return;
+  $('#scene-title').textContent=focus.name;
+  let description='',clue='';
+  if(focus.type==='lamp'){
+    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A beam reaches the central lens. A cable leaves the back of the pedestal.':'Its shutter is closed. The beam is absent, but the cable remains.';
+    if(traced===focus.id)clue=`Following this cable leads behind the rear screens to the ${sourceNames[source].toLowerCase()} well.`;
+    if(knownSources.has(source))clue=`The ${sourceNames[source].toLowerCase()} well powers this lamp. Its pulse also reaches the ${pairNames(source)}.`;
+  }else if(focus.type==='source'){
+    description=`Behind the screens, a well bears a ${sourceNames[focus.id].toLowerCase()} marking. Two cables leave the well.`;
+    if(knownSources.has(focus.id))clue=`Its pulse reaches the ${pairNames(focus.id)}. Their markings and rhythms match.`;
+  }else if(focus.type==='receiver'){
+    description='Four patterned places sit inside the lens. Some patterns arrive as overlapping, trembling rings. A single contribution makes a clean ring; an absent pattern leaves a gap.';
+    if(analyze(puzzle).balanced)clue='All four places carry a single, steady ring. The far doorway is open.';
+  }else description=analyze(puzzle).balanced?'The beam is steady. The doorway stands open.':'The doorway is sealed. Its four markings repeat the shapes inside the receiver.';
+  $('#scene-text').textContent=description;$('#clue-text').textContent=clue;
+}
+function sync(){
+  const result=analyze(puzzle);audio.update(result.counts,world?.camera);
+  $('#room-state').textContent=result.balanced?'The doorway is open':'The doorway is sealed';
+  if(world){world.puzzle=puzzle;world.traceLamp=traced;world.pulseSource=pulsed;world.focus=focus;}
+  $('#guided-navigation').hidden=!(guided||textMode);$('#scene-description').hidden=!textMode;
+  const label=!focus?'Walk close and look at an object':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Close lamp shutter':'Open lamp shutter'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
+  $('#action-label').textContent=label;$('#interact').disabled=!focus;
+  $('#trace').hidden=focus?.type!=='lamp';
+  $('#target-label').textContent=focus?.name||'';$('#target-label').hidden=!focus||textMode;
+  if(textMode)describe();
+}
+function visit(index){
+  placeIndex=(Number(index)+places.length)%places.length;focus=places[placeIndex];$('#place').value=String(placeIndex);
+  if(world){const [x,y,z]=focus.stand,delta=focus.position.map((v,i)=>v-[x,y,z][i]);world.camera={x,y,z,yaw:Math.atan2(delta[0],-delta[2]),pitch:Math.atan2(delta[1],Math.hypot(delta[0],delta[2]))};}
+  clearInput();sync();if(textMode)$('#announcer').textContent=focus.name+'. '+$('#scene-text').textContent;
+}
+function start(){
+  audio.start().then(()=>{if(puzzle)audio.update(analyze(puzzle).counts,world?.camera);}).catch(()=>{audio.setEnabled(false);$('#sound-button').textContent='Sound unavailable';$('#sound-button').disabled=true;});
+  const seed=crypto.getRandomValues(new Uint32Array(1))[0];puzzle=createPuzzle(seed);playing=true;finished=false;ending=false;focus=null;traced=null;pulsed=null;hintCount=0;knownSources=new Set();clearInput();
+  $('#intro').hidden=true;$('#ending').hidden=true;$('#hud').hidden=false;$('#restart').hidden=false;$('#hint-text').textContent='';
+  if(world){world.intro=false;world.reset(puzzle);}if(guided||textMode)visit(12);else sync();
+  say('The beam is bright. The doorway stays shut.');mouseUI();requestMouse();
+}
+function act(){
+  if(!playing||ending||$('#settings').open||!focus)return;
+  clearInput();
+  if(focus.type==='lamp'){
+    const before=analyze(puzzle);puzzle=toggleLamp(puzzle,focus.id);audio.switch(puzzle.enabled[focus.id]);const after=analyze(puzzle);
+    if(!before.balanced&&after.balanced){audio.unlock();say('The beam settles. The far doorway opens.');}
+    else if(before.balanced&&!after.balanced)say('The beam changes again. The doorway closes.');
+    else say(puzzle.enabled[focus.id]?'A beam joins the lens.':'A beam fades. The lens responds.');
+  }else if(focus.type==='source'){
+    pulsed=focus.id;audio.pulse(focus.id);traced=null;knownSources.add(focus.id);say('One well. Two lamps answer with the same pulse.');
+  }else if(focus.type==='receiver'){
+    const result=analyze(puzzle);say(result.balanced?'Four clear patterns. A steady beam.':result.active===0?'Silence. Every pattern is missing.':result.repeated&&result.missing?'Some patterns repeat. Others are missing.':result.repeated?'A pattern is arriving more than once.':'There are gaps where a pattern should be.');
+  }else if(analyze(puzzle).balanced){end();return;}else say('Four empty outlines in the door. The receiver hums behind you.');
+  sync();
+}
+function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('A thin line leaves the pedestal and runs behind the screens.');sync();}
+function end(){if(ending)return;releaseMouse();ending=true;playing=false;finished=true;clearInput();$('#transition').classList.add('active');setTimeout(()=>{$('#hud').hidden=true;$('#ending').hidden=false;if(world)world.intro=true;$('#ending').focus({preventScroll:true});$('#transition').classList.remove('active');window.scrollTo(0,0);},still?0:330);}
+function pick(){
+  if(!world)return null;const c=world.camera,dir=[Math.sin(c.yaw)*Math.cos(c.pitch),Math.sin(c.pitch),-Math.cos(c.yaw)*Math.cos(c.pitch)];let best=null,score=.88;
+  for(const place of places){const d=place.position.map((v,i)=>v-[c.x,c.y,c.z][i]),length=Math.hypot(...d);if(length>3.1)continue;const dot=d.reduce((n,v,i)=>n+v*dir[i],0)/length;if(dot>score&&lineOfSight([c.x,c.y,c.z],place.position)){score=dot;best=place;}}
+  return best;
+}
+$('#start').addEventListener('click',start);$('#again').addEventListener('click',start);$('#restart').addEventListener('click',start);$('#interact').addEventListener('click',act);$('#trace').addEventListener('click',trace);
+$('.wordmark').addEventListener('click',e=>e.preventDefault());
+$('#place').addEventListener('change',e=>visit(e.target.value));$('#previous-place').addEventListener('click',()=>visit(placeIndex-1));$('#next-place').addEventListener('click',()=>visit(placeIndex+1));
+function setSound(enabled){audio.setEnabled(enabled);$('#sound-enabled').checked=enabled;$('#sound-button').textContent=enabled?'Sound on':'Sound off';$('#sound-button').setAttribute('aria-pressed',String(enabled));if(enabled&&playing)audio.start().then(()=>audio.update(analyze(puzzle).counts,world?.camera)).catch(()=>{});}
+$('#sound-button').addEventListener('click',()=>setSound(!audio.enabled));$('#sound-enabled').addEventListener('change',e=>setSound(e.target.checked));
+$('#settings-button').addEventListener('click',()=>{releaseMouse();clearInput();$('#settings').showModal();});$('#settings-done').addEventListener('click',()=>$('#settings').close());
+$('#guided').addEventListener('change',e=>{guided=e.target.checked;if(guided)releaseMouse();document.body.classList.toggle('guided',guided);clearInput();if(playing&&(guided||textMode))visit(placeIndex);else if(puzzle)sync();});
+$('#still').addEventListener('change',e=>{still=e.target.checked;document.body.classList.toggle('still',still);if(world)world.still=still;});
+$('#text-mode').addEventListener('change',e=>{textMode=e.target.checked;if(textMode)releaseMouse();document.body.classList.toggle('text-mode',textMode);if(world)world.hidden=textMode;clearInput();if(playing&&(guided||textMode))visit(placeIndex);else if(puzzle)sync();});
+$('#capture-mouse').addEventListener('change',e=>{captureMouse=e.target.checked;captureUnavailable=false;if(!captureMouse)releaseMouse();mouseUI();});
+$('#hint').addEventListener('click',()=>{$('#hint-text').textContent=["Try changing one shutter, then inspect the receiver. What changes?","There's a route behind the screens. The marks on the backs of the lamps may help.","The receiver needs each source once. Different lamps can carry the same source. Follow their cables before choosing."][Math.min(hintCount++,2)];});
+$('#download').addEventListener('click',()=>{const a=document.createElement('a'),url=URL.createObjectURL(new Blob([fieldNotes],{type:'text/plain;charset=utf-8'}));a.href=url;a.download='echo-chamber-field-notes.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+const controlKeys=['w','a','s','d','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','r','f'];
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'||e.key==='Tab'){releaseMouse();clearInput();}
+  if(!playing||$('#settings').open||ending||['INPUT','SELECT','A'].includes(e.target.tagName))return;
+  const k=e.key.length===1?e.key.toLowerCase():e.key;
+  if(k==='e'||e.code==='Space'){if(e.code==='Space'&&e.target.tagName==='BUTTON')return;e.preventDefault();if(!e.repeat)act();return;}
+  if(k==='q'){e.preventDefault();if(!e.repeat)trace();return;}
+  if(controlKeys.includes(k)&&!guided&&!textMode){e.preventDefault();keys.add(k);}
+});
+window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));window.addEventListener('blur',()=>{clearInput();releaseMouse();});document.addEventListener('visibilitychange',()=>{clearInput();if(document.hidden)releaseMouse();last=0;if(audio.ready){if(document.hidden)audio.context.suspend();else if(audio.enabled&&playing)audio.context.resume().catch(()=>{});}});
+for(const b of document.querySelectorAll('[data-control]')){b.addEventListener('pointerdown',e=>{if(!playing||$('#settings').open||guided||textMode)return;e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.control);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>keys.delete(b.dataset.control));}
+$('#world').addEventListener('pointerdown',e=>{
+  if(!playing||$('#settings').open||guided||textMode)return;
+  if(document.pointerLockElement===$('#world'))return;
+  if(e.pointerType==='mouse')requestMouse();
+  drag={x:e.clientX,y:e.clientY};$('#world').setPointerCapture(e.pointerId);
+});
+$('#world').addEventListener('pointermove',e=>{if(document.pointerLockElement===$('#world')||!drag||!world)return;rotateLook(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};});
+document.addEventListener('mousemove',e=>{if(document.pointerLockElement===$('#world')&&playing&&!$('#settings').open&&!guided&&!textMode)rotateLook(e.movementX,e.movementY);});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])$('#world').addEventListener(event,()=>drag=null);
+window.addEventListener('resize',()=>world?.resize());
+function frame(now){
+  const dt=last?Math.min((now-last)/1000,.05):0;last=now;elapsed+=dt;$('#whisper').classList.toggle('visible',elapsed<captionUntil);
+  if(world){
+    world.still=still;
+    if(playing&&!$('#settings').open&&!guided&&!textMode){
+      const c=world.camera;c.pitch=Math.max(-1,Math.min(.8,c.pitch+((keys.has('r')?1:0)-(keys.has('f')?1:0))*dt));c.yaw+=((keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0))*dt*1.4;
+      let forward=(keys.has('w')||keys.has('ArrowUp')?1:0)-(keys.has('s')||keys.has('ArrowDown')?1:0),side=(keys.has('d')?1:0)-(keys.has('a')?1:0);const length=Math.hypot(forward,side)||1;forward/=length;side/=length;
+      const nx=c.x+(Math.sin(c.yaw)*forward+Math.cos(c.yaw)*side)*dt*3.3,nz=c.z+(-Math.cos(c.yaw)*forward+Math.sin(c.yaw)*side)*dt*3.3;
+      const oldX=c.x,oldZ=c.z;if(canStand(nx,c.z))c.x=nx;if(canStand(c.x,nz))c.z=nz;
+      const moved=Math.hypot(c.x-oldX,c.z-oldZ);stepDistance+=moved;if(stepDistance>.95){audio.footstep();stepDistance=0;}world.walkBob=!still&&moved>.001?Math.sin(elapsed*8)*.018:0;
+      const selected=pick();if(selected!==focus){focus=selected;sync();}
+      if(analyze(puzzle).balanced&&c.z< -10.8&&Math.abs(c.x)<1.3)end();
+    }
+    if(playing&&puzzle&&elapsed-audioLast>.15){audio.update(analyze(puzzle).counts,world.camera);audioLast=elapsed;}
+    world.render(elapsed);
+  }
+  requestAnimationFrame(frame);
+}
+document.body.classList.toggle('still',still);mouseUI();requestAnimationFrame(frame);
+
+</script>
+</body>
+</html>
