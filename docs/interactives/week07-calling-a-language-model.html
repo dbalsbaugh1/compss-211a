@@ -139,7 +139,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
   <p class="small" id="post">Loading…</p>
   <dl class="codebook" id="codebook"></dl>
 </details>
-<details id="commentsBox"><summary>The comments</summary>
+<details id="commentsBox"><summary>The data: six comments</summary>
   <ul class="comment-list" id="commentList"><li class="small">Loading…</li></ul>
 </details>
 </aside>
@@ -147,7 +147,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 <div class="work">
 <div class="status" id="engineStatus" role="status">Loading the saved responses…</div>
 <div class="brief">
-  <p><b>The question.</b> Six comments reply to a post about a borrowed bike. Can Gemini label them with your codebook the way you would?</p>
+  <p><b>The question.</b> The data is six comments that reply to a post about a borrowed bike. Can Gemini label them with your codebook the way you would?</p>
   <ol class="stages" id="stages" aria-label="Where you are">
     <li data-stage="yours"><span>Your labels</span></li><li data-stage="call"><span>One call</span></li><li data-stage="json"><span>A fixed form</span></li><li data-stage="all"><span>Every comment</span></li><li data-stage="compare"><span>Compare</span></li>
   </ol>
@@ -231,7 +231,7 @@ const FIG_SCHEMA = `<div class="fig fig-compare">
 
 // The variables in the side panel. from: the first step (counted from 0) that has the variable.
 const VARIABLES = [
-  {name: 'comments', kind: 'dictionary', what: 'the six comments, from ID to text'},
+  {name: 'comments', kind: 'dictionary', what: 'the data: the six comments, from ID to text'},
   {name: 'build_prompt', kind: 'function', what: 'makes the prompt for one comment: <code>build_prompt(text=...)</code>'},
   {name: 'SYSTEM', kind: 'text', what: 'the system instruction: the task and the codebook', from: 2},
   {name: 'LABEL_SCHEMA', kind: 'dictionary', what: 'the schema: the form the answer must fill in', from: 3},
@@ -253,8 +253,10 @@ const STEPS = [
   {topic: 'Label the comments yourself', stage: 'yours',
    intro: ['Researchers often label texts by hand. They read each text and give it a label from a <b>codebook</b>: a list of the labels and what each one means. Language models can now do some of this labeling through an API. How well depends on the task, so researchers check a model\'s labels against their own before they trust them.',
            'Here you code replies to a moral dispute: someone asks strangers online whether they were wrong. The codebook asks what each comment says about who was in the wrong, not who was really in the wrong. That is labeling, not judging.',
-           'Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.<span class="open-ref">Read the post, the codebook and the comments in the side panel first:<br><button type="button" data-open-box="codebookBox">The post and the codebook</button><button type="button" data-open-box="commentsBox">The comments</button></span>'],
-   task: 'Replace each <code>____</code> with one label: <code>poster_at_fault</code>, <code>poster_not_at_fault</code> or <code>unclear</code>.',
+           'The data is six comments. They are already loaded into Python as <code>comments</code>, a dictionary from each comment\'s ID to its text. The example prints them.',
+           'Label the comments yourself before you see Gemini\'s labels, so that its answers don\'t change yours.<span class="open-ref">Read the post, the codebook and the data in the side panel first:<br><button type="button" data-open-box="codebookBox">The post and the codebook</button><button type="button" data-open-box="commentsBox">The data: six comments</button></span>'],
+   example: 'print(len(comments), "comments")\nfor comment_id, text in comments.items():\n    print(comment_id, text)',
+   task: 'Run the example. Then replace each <code>____</code> with one label: <code>poster_at_fault</code>, <code>poster_not_at_fault</code> or <code>unclear</code>.',
    starter: 'my_labels = {\n    "C1": "____",\n    "C2": "____",\n    "C3": "____",\n    "C4": "____",\n    "C5": "____",\n    "C6": "____",\n}\nmy_labels',
    answer: 'my_labels = {\n    "C1": "poster_at_fault",\n    "C2": "poster_not_at_fault",\n    "C3": "unclear",\n    "C4": "poster_at_fault",\n    "C5": "unclear",\n    "C6": "unclear",\n}\nmy_labels',
    check: {truths: [['isinstance(my_labels, dict) and sorted(my_labels) == sorted(comments)', 'my_labels should have one entry for each comment, C1 to C6.'],
