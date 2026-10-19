@@ -1,9 +1,9 @@
 {
  "source": "recorded",
- "source_note": "Recorded from gemini-3.5-flash-lite on 2026-10-14 with the inputs in this file.",
+ "source_note": "Answers, token counts and finish reasons are unchanged recordings from gemini-3.5-flash-lite on 2026-10-14. The lesson now places the post in the user message to match the slides. The original recorded request is retained in recorded_request; these are not new model outputs for the revised message layout.",
  "model": "gemini-3.5-flash-lite",
  "recorded_on": "2026-10-14",
- "post": "A person borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them about it.",
+ "post": "A person borrowed their roommate's bike without asking and returned it with a flat tire. The roommate yelled at them.",
  "labels": [
   "poster_at_fault",
   "poster_not_at_fault",
@@ -22,10 +22,10 @@
   }
  },
  "system": {
-  "v1": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong.\n\nAlso give a reason of one short sentence.",
-  "v2": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong, or it says both people were in the wrong.\n\nAlso give a reason of one short sentence."
+  "v1": "You label comments on a post.\nGive the comment one label:\nposter_at_fault: the comment says the poster was in the wrong.\nposter_not_at_fault: the comment says the poster was not in the wrong.\nunclear: the comment does not say who was in the wrong.\n\nAlso give a reason of one short sentence.",
+  "v2": "You label comments on a post.\nGive the comment one label:\nposter_at_fault: the comment says the poster was in the wrong.\nposter_not_at_fault: the comment says the poster was not in the wrong.\nunclear: the comment does not say who was in the wrong, or it says both people were in the wrong.\n\nAlso give a reason of one short sentence."
  },
- "template": "Label this comment.\n\nComment: {text}",
+ "template": "Post: {post}\n\nComment: {text}",
  "schema": {
   "type": "object",
   "properties": {
@@ -265,5 +265,13 @@
     }
    ]
   }
+ },
+ "recorded_request": {
+  "post": "A person borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them about it.",
+  "system": {
+   "v1": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong.\n\nAlso give a reason of one short sentence.",
+   "v2": "You label comments on a post. In the post, a person says they borrowed their roommate's bike without asking and brought it back with a flat tire. The roommate yelled at them.\n\nGive the comment one label:\n- poster_at_fault: the comment says the poster was in the wrong.\n- poster_not_at_fault: the comment says the poster was not in the wrong.\n- unclear: the comment does not say who was in the wrong, or it says both people were in the wrong.\n\nAlso give a reason of one short sentence."
+  },
+  "template": "Label this comment.\n\nComment: {text}"
  }
 }
