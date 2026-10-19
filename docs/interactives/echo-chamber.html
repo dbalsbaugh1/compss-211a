@@ -96,7 +96,7 @@ function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puz
 // The same positions drive rendered mechanisms and click targets.
 function mechanisms(){return [
   ...lampPositions.flatMap((p,id)=>[
-    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.23,normal:[-Math.sign(p[0]),0,0]},
+    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.27,normal:[-Math.sign(p[0]),0,0]},
     {type:'lamp',kind:'contact',id,name:'Cable contact',position:contactPosition(id),radius:.22,normal:[0,0,1]}
   ]),
   ...sourcePositions.map((p,id)=>({type:'source',kind:'well',id,name:'Well plunger',position:p,radius:.35,normal:[0,1,0]})),
@@ -281,8 +281,8 @@ class Observatory {
       this.draw('cube',[position[0],.83,position[2]],[.44,1.4,.44],'#475969');
       const lever=shutterPosition(id),contact=contactPosition(id),highlight=this.focus?.type==='lamp'&&this.focus.id===id;
       this.draw('cube',[position[0]-side*.24,lever[1],position[2]],[.06,.46,.28],'#263c4c');
-      this.draw('sphere',lever,[.1,.1,.1],'#9d835b');
-      const grip=[lever[0]-side*.08,lever[1]+(openness*2-1)*.12,lever[2]];
+      this.draw('sphere',lever,[.055,.055,.055],'#9d835b');
+      const grip=[lever[0]-side*.1,lever[1]+(openness*2-1)*.18,lever[2]];
       this.thread(lever,grip,'#d6b57d',.055);
       this.draw('sphere',grip,[.07,.07,.07],highlight&&this.focus.kind==='shutter'?'#fff2c7':'#d6b57d',0,0,.25);
       this.draw('cube',[contact[0],contact[1],contact[2]-.045],[.34,.3,.07],'#273d4a');

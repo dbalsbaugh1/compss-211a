@@ -22,7 +22,7 @@ export function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositi
 // The same positions drive rendered mechanisms and click targets.
 export function mechanisms(){return [
   ...lampPositions.flatMap((p,id)=>[
-    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.23,normal:[-Math.sign(p[0]),0,0]},
+    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.27,normal:[-Math.sign(p[0]),0,0]},
     {type:'lamp',kind:'contact',id,name:'Cable contact',position:contactPosition(id),radius:.22,normal:[0,0,1]}
   ]),
   ...sourcePositions.map((p,id)=>({type:'source',kind:'well',id,name:'Well plunger',position:p,radius:.35,normal:[0,1,0]})),
