@@ -29,6 +29,12 @@ dialog{border:1px solid #68828d77;box-shadow:0 20px 100px #020d17aa;border-radiu
 
 .look-hint{position:absolute;right:42px;bottom:27px;margin:0;font-size:9px;color:#a3b8c3;pointer-events:none}.mouse-captured #world{cursor:none}.mouse-captured .top-actions{opacity:.3;pointer-events:none}.mouse-captured .interaction{pointer-events:none}.mouse-captured .chapter{opacity:.65}.text-mode .look-hint,.guided .look-hint{display:none}@media(max-width:600px),(pointer:coarse){.look-hint{display:none}}
 
+/* In walking mode, actions belong to the instruments themselves. */
+.interaction{display:none}.guided .interaction,.text-mode .interaction{display:flex}
+#world.mechanism-hover{cursor:pointer}.mouse-captured #world.mechanism-hover{cursor:none}
+.has-target #reticle{width:19px;height:19px;border-color:#f4ddb0;box-shadow:0 0 12px #f1ca7944}
+.free-pointer #reticle{display:none}.free-pointer #target-label{left:var(--aim-x);top:calc(var(--aim-y) + 24px)}
+
 </style>
 
 </head>
@@ -51,16 +57,16 @@ dialog{border:1px solid #68828d77;box-shadow:0 20px 100px #020d17aa;border-radiu
     <div class="chapter"><div>The observatory</div><h1>The echo chamber</h1><p class="room-state" id="room-state">The doorway is sealed</p></div>
     <div id="reticle" aria-hidden="true"><span></span></div><div id="target-label" aria-hidden="true" hidden></div>
     <p id="whisper" class="whisper" aria-hidden="true"></p>
-    <div class="interaction"><button id="interact"><kbd aria-hidden="true">E</kbd> <span id="action-label">Look toward an object</span></button><button id="trace" hidden><kbd aria-hidden="true">Q</kbd><span>Trace cable</span></button></div>
+    <div class="interaction"><button id="interact"><span id="action-label">Approach a mechanism</span></button><button id="trace" hidden><span>Press cable contact</span></button></div>
     <div class="guided-navigation" id="guided-navigation" hidden><button id="previous-place" aria-label="Previous landmark">←</button><select id="place" aria-label="Explore a landmark"></select><button id="next-place" aria-label="Next landmark">→</button></div>
     <div id="scene-description" class="scene-description" hidden tabindex="-1"><h2 id="scene-title"></h2><p id="scene-text"></p><p id="clue-text"></p></div>
-    <div class="movement-help" id="movement-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span><span><kbd>←</kbd><kbd>→</kbd> turn</span><span><kbd>E</kbd> switch / inspect</span><span><kbd>Q</kbd> trace</span><span>Mouse to look</span><span><kbd>Esc</kbd> cursor</span></div>
+    <div class="movement-help" id="movement-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span><span><kbd>←</kbd><kbd>→</kbd> turn</span><span>Click a mechanism</span><span>Mouse to look</span><span><kbd>Esc</kbd> cursor</span></div>
     <div class="touch-controls" id="touch-controls" aria-label="Movement"><button data-control="ArrowLeft" aria-label="Turn left">↶</button><button data-control="w" aria-label="Move forward">↑</button><button data-control="ArrowRight" aria-label="Turn right">↷</button><button data-control="a" aria-label="Move left">←</button><button data-control="s" aria-label="Move backward">↓</button><button data-control="d" aria-label="Move right">→</button></div>
     <p class="look-hint" id="look-status"></p>
     <p class="world-note">Follow the connections. Experiment. Undo anything.</p>
   </section>
 
-  <dialog id="settings" aria-labelledby="settings-title"><form method="dialog"><button class="close" aria-label="Close settings">×</button></form><p class="eyebrow">Make yourself comfortable</p><h2 id="settings-title">Your way through.</h2><p>There’s no timer, combat, or penalty for trying again.</p><label class="setting"><span><b>Explore without walking</b><small>Choose individual landmarks. The puzzle and choices stay the same.</small></span><input type="checkbox" id="guided"></label><label class="setting"><span><b>Capture mouse</b><small>Hide the cursor and look freely during mouse play. Escape releases it. Switch off for drag controls.</small></span><input type="checkbox" id="capture-mouse" checked></label><label class="setting"><span><b>Still world</b><small>Stop pulsing and idle motion. Static shapes and cable routes still reveal the connections.</small></span><input type="checkbox" id="still"></label><label class="setting"><span><b>Room sound</b><small>A quiet hum, resonant switches, and footsteps. Every puzzle clue also has a visual form.</small></span><input type="checkbox" id="sound-enabled" checked></label><label class="setting"><span><b>Text view</b><small>Hide the 3D scene. Play the same investigation in text.</small></span><input type="checkbox" id="text-mode"></label><div class="controls-copy"><b>Explore at your own pace</b><p>WASD to move. Left/right arrows to turn. R/F to look up or down. Move the mouse to look; Escape releases the cursor for menus. Click the scene to resume. Touch uses dragging. Walk close to a lamp and look at it. E or Space switches it. Q traces its cable. The central receiver and the wells can also be inspected. Escape closes settings. Every action has a labeled button.</p></div><button class="hint-request" id="hint">Ask for a small nudge</button><p id="hint-text" role="status"></p><button class="button dark" id="settings-done">Back to the observatory</button></dialog>
+  <dialog id="settings" aria-labelledby="settings-title"><form method="dialog"><button class="close" aria-label="Close settings">×</button></form><p class="eyebrow">Make yourself comfortable</p><h2 id="settings-title">Your way through.</h2><p>There’s no timer, combat, or penalty for trying again.</p><label class="setting"><span><b>Explore without walking</b><small>Choose individual landmarks. The puzzle and choices stay the same.</small></span><input type="checkbox" id="guided"></label><label class="setting"><span><b>Capture mouse</b><small>Hide the cursor and look freely during mouse play. Escape releases it. Switch off for drag controls.</small></span><input type="checkbox" id="capture-mouse" checked></label><label class="setting"><span><b>Still world</b><small>Stop pulsing and idle motion. Static shapes and cable routes still reveal the connections.</small></span><input type="checkbox" id="still"></label><label class="setting"><span><b>Room sound</b><small>A quiet hum, resonant switches, and footsteps. Every puzzle clue also has a visual form.</small></span><input type="checkbox" id="sound-enabled" checked></label><label class="setting"><span><b>Text view</b><small>Hide the 3D scene. Play the same investigation in text.</small></span><input type="checkbox" id="text-mode"></label><div class="controls-copy"><b>Explore at your own pace</b><p>WASD to move. Left/right arrows to turn. R/F to look up or down. Move the mouse to look; Escape releases the cursor for menus. Click the scene to resume. Walk close and click a physical control: the brass lever moves the shutter; the blue contact below it sends a pulse along the cable. The wells have plungers, and the receiver has a listening plate. Touch uses dragging to look and tapping to interact. E or Space also operates the mechanism you aim at. Guided and text play offer labeled buttons for these same controls. Escape closes settings.</p></div><button class="hint-request" id="hint">Ask for a small nudge</button><p id="hint-text" role="status"></p><button class="button dark" id="settings-done">Back to the observatory</button></dialog>
 
   <section id="ending" class="ending" hidden tabindex="-1" aria-labelledby="ending-title"><div class="ending-content"><p class="edition">The doorway opens</p><h1 id="ending-title">Less light.<br>A clearer signal.</h1><p class="ending-claim">The room is quieter. Every source is still there.</p><p class="ending-copy">Each source reached the receiver once. More lamps had made the beam brighter, but some repeated what was already there. You kept every source and removed the repetition. In research, two reports that copy the same source are not two independent confirmations.</p><div class="receipts"><div><b>Shared origins</b><p>Cables and markings revealed shared origins.</p></div><div><b>Real consequences</b><p>Every switch changed the real circuit.</p></div><div><b>Your solution</b><p>Which lamps to keep was yours to work out.</p></div></div><p class="lesson">A result is a starting point.<br><strong>Check the evidence before you trust it.</strong></p><div class="ending-actions"><button class="button dark" id="again">Explore again <span aria-hidden="true">↗</span></button><button class="button light" id="download">Save field notes</button><a href="https://github.com/macss-berkeley/compss-211a/blob/main/lessons/week13_final-presentations/course_synthesis_and_next_steps.md" target="_blank" rel="noopener">Back to the course ↗</a></div><small class="end-note">Different wiring each time. Several valid solutions. A real research habit. Inspired by COMPSS 211A at UC Berkeley.</small></div></section>
   <p id="announcer" class="sr-only" aria-live="polite" role="status"></p>
@@ -84,7 +90,36 @@ function analyze(puzzle){
 }
 function toggleLamp(puzzle,id){if(!Number.isInteger(id)||id<0||id>7)return puzzle;return {...puzzle,enabled:puzzle.enabled.map((on,i)=>i===id?!on:on)};}
 function receiverPosition(source){const a=source*Math.PI/2+Math.PI/4;return [Math.cos(a)*1.05,2.45+Math.sin(a)*1.05,-3.8];}
-function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [[p[0],.025,p[2]],[lane,.025,p[2]],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+function shutterPosition(id){const p=lampPositions[id];return [p[0]-Math.sign(p[0])*.38,1.06,p[2]];}
+function contactPosition(id){const p=lampPositions[id];return [p[0],.48,p[2]+.29];}
+function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [contactPosition(id),[p[0],.025,p[2]+.42],[lane,.025,p[2]+.42],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+// The same positions drive rendered mechanisms and click targets.
+function mechanisms(){return [
+  ...lampPositions.flatMap((p,id)=>[
+    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.23,normal:[-Math.sign(p[0]),0,0]},
+    {type:'lamp',kind:'contact',id,name:'Cable contact',position:contactPosition(id),radius:.22,normal:[0,0,1]}
+  ]),
+  ...sourcePositions.map((p,id)=>({type:'source',kind:'well',id,name:'Well plunger',position:p,radius:.35,normal:[0,1,0]})),
+  {type:'receiver',kind:'receiver',id:0,name:'Listening plate',position:[0,1.05,-2.55],radius:.34,normal:[0,0,1]},
+  {type:'door',kind:'door',id:0,name:'Door seal',position:[0,1.5,-11.5],radius:.7,normal:[0,0,1]}
+];}
+function viewRay(camera,nx=0,ny=0,aspect=1){
+  const sy=Math.sin(camera.yaw),cy=Math.cos(camera.yaw),sp=Math.sin(camera.pitch),cp=Math.cos(camera.pitch),f=Math.tan(Math.PI/6);
+  const dir=[sy*cp+nx*f*aspect*cy-ny*f*sy*sp,sp+ny*f*cp,-cy*cp+nx*f*aspect*sy+ny*f*cy*sp],length=Math.hypot(...dir);
+  return dir.map(v=>v/length);
+}
+function pickMechanism(camera,dir,targets=mechanisms()){
+  const eye=[camera.x,camera.y,camera.z];let best=null,nearest=Infinity;
+  for(const target of targets){
+    const offset=target.position.map((v,i)=>v-eye[i]),distance=Math.hypot(...offset);
+    if(distance>2.8||!lineOfSight(eye,target.position)||offset.reduce((sum,v,i)=>sum+v*target.normal[i],0)>=0)continue;
+    const along=offset.reduce((sum,v,i)=>sum+v*dir[i],0),miss=distance*distance-along*along;
+    if(along<=0||miss>target.radius*target.radius)continue;
+    const hit=along-Math.sqrt(Math.max(0,target.radius*target.radius-miss));
+    if(hit<nearest){nearest=hit;best=target;}
+  }
+  return best;
+}
 function canStand(x,z){
   if(x< -6.3||x>6.3||z< -11.2||z>8.2)return false;
   if(Math.hypot(x,z+3.8)<1.65)return false;
@@ -237,19 +272,30 @@ class Observatory {
     }
     for(let id=0;id<8;id++){
       const position=lampPositions[id],source=this.puzzle.wiring[id],on=this.puzzle.enabled[id],side=Math.sign(position[0]);
+      this.shutterOpen??=this.puzzle.enabled.map(Number);this.shutterOpen[id]=this.still?Number(on):this.shutterOpen[id]+(Number(on)-this.shutterOpen[id])*Math.min(1,delta*10);const openness=this.shutterOpen[id];
       const chosen=this.traceLamp===id||this.pulseSource===source;
       const path=cablePath(this.puzzle,id);
       for(let k=1;k<path.length;k++)this.thread(path[k-1],path[k],chosen?'#e1b56c':'#5a7183',chosen?.045:.014);
       if(chosen&&!this.still){const route=(t*.42)% (path.length-1),segment=Math.floor(route),k=route-segment;const point=path[segment].map((v,i)=>v+(path[segment+1][i]-v)*k);this.draw('sphere',[point[0],point[1]+.055,point[2]],[.07,.07,.07],'#fff7ce',0,0,1);}
       this.draw('cylinder',[position[0],.1,position[2]],[.4,.2,.4],'#526374');
       this.draw('cube',[position[0],.83,position[2]],[.44,1.4,.44],'#475969');
-      this.draw('cube',[position[0]-side*.28,1.05,position[2]],[.16,.3,.15],on?'#d7b87a':'#354552',0,on?-.35:.35);
+      const lever=shutterPosition(id),contact=contactPosition(id),highlight=this.focus?.type==='lamp'&&this.focus.id===id;
+      this.draw('cube',[position[0]-side*.24,lever[1],position[2]],[.06,.46,.28],'#263c4c');
+      this.draw('sphere',lever,[.1,.1,.1],'#9d835b');
+      const grip=[lever[0]-side*.08,lever[1]+(openness*2-1)*.12,lever[2]];
+      this.thread(lever,grip,'#d6b57d',.055);
+      this.draw('sphere',grip,[.07,.07,.07],highlight&&this.focus.kind==='shutter'?'#fff2c7':'#d6b57d',0,0,.25);
+      this.draw('cube',[contact[0],contact[1],contact[2]-.045],[.34,.3,.07],'#273d4a');
+      this.draw('ring',contact,[.14,.14,.14],highlight&&this.focus.kind==='contact'?'#fff2c7':'#b29c73',0,0,.35);
+      this.draw('sphere',[contact[0],contact[1],contact[2]+.015],[.085,.085,.045],chosen?'#e9f5d3':'#6cabb7',0,0,chosen?.9:.35);
       this.glyph(source,[position[0]+side*.245,.94,position[2]],.9,side*Math.PI/2,'#bcbca5');
       const rhythm=this.still?1:1+Math.sin(t*(1.2+source*.4))*.1;
       this.draw('sphere',position,[.18*rhythm,.18*rhythm,.18*rhythm],on?'#ffe0a2':'#324251',0,0,on?.8:0);
       this.draw('ring',position,[.3,.3,.3],chosen?'#ffffff':on?'#e8b779':'#5d737f',0,0,.4);
+      // Two metal leaves close over the light; the nearby lever stays operable.
+      for(const blade of [-1,1])this.draw('cube',[position[0]+blade*(.13+openness*.27),position[1],position[2]+.21],[.25,.48,.065],on?'#77827c':'#a59574',0,blade*.24*openness);
       if(on)this.thread(position,receiverPosition(source),analysis.counts[source]>1?'#dfb17e':'#b9e2e3',.016);
-      if(this.focus?.type==='lamp'&&this.focus.id===id)this.draw('ring',position,[.39,.39,.39],'#fff8e0',0,0,1);
+      if(highlight)this.draw('ring',this.focus.position,[.25,.25,.25],'#fff8e0',this.focus.kind==='shutter'?side*Math.PI/2:0,0,.7);
     }
     for(let source=0;source<4;source++){
       const pos=sourcePositions[source],selected=this.pulseSource===source||this.traceLamp!==null&&this.puzzle.wiring[this.traceLamp]===source;
@@ -259,6 +305,9 @@ class Observatory {
       this.draw('sphere',[pos[0],.53,pos[2]],[.13,.08,.13],selected?'#fff3bb':'#91bec4',0,0,1);
     }
     this.draw('sphere',[0,.51,-3.8],[.45,.035,.45],this.solved?'#c8eee1':'#eab87a',0,0,1);
+    this.draw('cube',[0,.8,-2.63],[.65,.55,.18],'#435968');
+    this.draw('ring',[0,1.05,-2.55],[.25,.25,.25],this.focus?.type==='receiver'?'#fff2c7':'#b9a27c',0,0,.4);
+    for(let i=-1;i<=1;i++)this.draw('cube',[i*.11,1.05,-2.53],[.025,.21,.025],'#a1c4c6',0,0,.2);
     if(this.aperture>.01){
       this.draw('cube',[0,2.65,-21.5],[4.2,5.3,.03],'#274f66',0,0,.25);
       this.draw('sphere',[0,2.6,-20],[.42,.42,.42],'#e0d7af',0,0,this.aperture);
@@ -283,36 +332,40 @@ class Observatory {
     const lines=source===1?[[[0,.22],[.19,0]],[[.19,0],[0,-.22]],[[0,-.22],[-.19,0]],[[-.19,0],[0,.22]]]:source===2?[[[-.2,0],[.2,0]],[[0,-.2],[0,.2]]]:[[[-.16,-.2],[-.16,.2]],[[0,-.2],[0,.2]],[[.16,-.2],[.16,.2]]];
     for(const [from,to]of lines)this.thread(map(from),map(to),color,.035*size);
   }
-  reset(puzzle){this.puzzle=puzzle;this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
+  reset(puzzle){this.puzzle=puzzle;this.shutterOpen=puzzle.enabled.map(Number);this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
 }
 
 const fieldNotes=`The Echo Chamber\nA first-person puzzle inspired by COMPSS 211A: Computing I.\n\nThe doorway responded to the sources represented in the beam, rather than its brightness. Two lamps could carry the very same source. Removing a repeated contribution reduced the glow but improved the signal. Removing the only contribution from another source left a gap.\n\nThe lesson is a research habit: trace where observations come from before treating them as independent evidence. A larger-looking result can contain repeated information.\n\nThe physical cables, shared markings, pulse rhythms, and receiver behavior all describe the same underlying circuit. The wiring changes when you start again. You can make mistakes, undo them, and find several valid solutions.\n\nCourse: https://github.com/macss-berkeley/compss-211a\n`;
 
-const $=s=>document.querySelector(s),keys=new Set(),places=landmarks(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const $=s=>document.querySelector(s),keys=new Set(),places=landmarks(),targets=mechanisms(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
 const audio=new ChamberSound();
-let audioLast=0,stepDistance=0,captureMouse=true,captureUnavailable=false;
+let audioLast=0,stepDistance=0,captureMouse=true,captureUnavailable=false,pointer=null,pointerDown=null,suppressClick=false;
 let world,puzzle,playing=false,finished=false,guided=false,still=reduced.matches,textMode=false,drag=null,last=0,elapsed=0,captionUntil=0,focus=null,placeIndex=12,traced=null,pulsed=null,hintCount=0,ending=false,knownSources=new Set();
 try{world=new Observatory($('#world'));}catch{textMode=true;document.body.classList.add('text-mode');$('#text-mode').checked=true;$('#text-mode').disabled=true;$('#text-mode').closest('label').querySelector('small').textContent='3D is unavailable here. Explore the same circuit in text.';}
 $('#still').checked=still;
 $('#place').innerHTML=places.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('');
-function clearInput(){keys.clear();drag=null;}
+function clearInput(){keys.clear();drag=null;pointerDown=null;}
 function releaseMouse(){if(document.pointerLockElement===($('#world')))document.exitPointerLock();}
 function canCaptureMouse(){return captureMouse&&!captureUnavailable&&matchMedia('(pointer:fine)').matches&&typeof $('#world').requestPointerLock==='function';}
 function mouseUI(){
   const locked=document.pointerLockElement===$('#world');document.body.classList.toggle('mouse-captured',locked);
-  $('#look-status').textContent=locked?'Esc releases the cursor':canCaptureMouse()?'Click scene to capture mouse':'Drag to look';
+  $('#look-status').textContent=locked?'Click a mechanism · Esc releases the cursor':'Click a mechanism · Drag to look';
 }
 function captureFailure(error){
   if(error?.message)console.warn('Mouse capture:',error.message);
   captureUnavailable=error?.name==='SecurityError'||error?.name==='NotSupportedError';
-  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click inside the scene to capture the mouse. You can also drag to look.');
+  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click a mechanism to use it. Drag to look around.');
 }
 function requestMouse(){
   if(!playing||guided||textMode||$('#settings').open||!canCaptureMouse()||document.pointerLockElement===$('#world'))return;
   try{const request=$('#world').requestPointerLock();if(request&&typeof request.catch==='function')request.catch(captureFailure);}catch{captureFailure();}
 }
 function rotateLook(x,y){if(!world)return;world.camera.yaw+=x*.0028;world.camera.pitch=Math.max(-1,Math.min(.8,world.camera.pitch-y*.0025));}
-document.addEventListener('pointerlockchange',()=>{clearInput();mouseUI();});
+function aimUI(){
+  const free=pointer&&document.pointerLockElement!==$('#world');document.body.classList.toggle('free-pointer',Boolean(free));
+  if(free){document.body.style.setProperty('--aim-x',pointer.x+'px');document.body.style.setProperty('--aim-y',pointer.y+'px');}
+}
+document.addEventListener('pointerlockchange',()=>{clearInput();pointer=null;suppressClick=true;mouseUI();aimUI();});
 document.addEventListener('pointerlockerror',captureFailure);
 function say(text){$('#announcer').textContent=text;$('#whisper').textContent=text;captionUntil=elapsed+8;$('#whisper').classList.add('visible');}
 function pairNames(source){return puzzle.wiring.flatMap((s,i)=>s===source?[lampNames[i]]:[]).join(' and ');}
@@ -321,7 +374,7 @@ function describe(){
   $('#scene-title').textContent=focus.name;
   let description='',clue='';
   if(focus.type==='lamp'){
-    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A beam reaches the central lens. A cable leaves the back of the pedestal.':'Its shutter is closed. The beam is absent, but the cable remains.';
+    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A brass lever sits beside the light. A separate blue contact joins a cable at the foot of the pedestal.':'Its shutter is closed. The brass lever can reopen it. The blue cable contact remains lit below.';
     if(traced===focus.id)clue=`Following this cable leads behind the rear screens to the ${sourceNames[source].toLowerCase()} well.`;
     if(knownSources.has(source))clue=`The ${sourceNames[source].toLowerCase()} well powers this lamp. Its pulse also reaches the ${pairNames(source)}.`;
   }else if(focus.type==='source'){
@@ -336,12 +389,14 @@ function describe(){
 function sync(){
   const result=analyze(puzzle);audio.update(result.counts,world?.camera);
   $('#room-state').textContent=result.balanced?'The doorway is open':'The doorway is sealed';
-  if(world){world.puzzle=puzzle;world.traceLamp=traced;world.pulseSource=pulsed;world.focus=focus;}
+  if(world){world.puzzle=puzzle;world.traceLamp=traced;world.pulseSource=pulsed;world.focus=focus?.kind?focus:null;}
   $('#guided-navigation').hidden=!(guided||textMode);$('#scene-description').hidden=!textMode;
-  const label=!focus?'Walk close and look at an object':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Close lamp shutter':'Open lamp shutter'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
+  const label=!focus?'Approach a mechanism':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Lower shutter lever':'Raise shutter lever'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
   $('#action-label').textContent=label;$('#interact').disabled=!focus;
   $('#trace').hidden=focus?.type!=='lamp';
-  $('#target-label').textContent=focus?.name||'';$('#target-label').hidden=!focus||textMode;
+  $('#target-label').textContent=focus?.kind?focus.name:'';$('#target-label').hidden=!focus?.kind||textMode;
+  document.body.classList.toggle('has-target',Boolean(focus?.kind));
+  $('#world').classList.toggle('mechanism-hover',Boolean(focus?.kind));
   if(textMode)describe();
 }
 function visit(index){
@@ -359,6 +414,7 @@ function start(){
 function act(){
   if(!playing||ending||$('#settings').open||!focus)return;
   clearInput();
+  if(focus.type==='lamp'&&focus.kind==='contact'){trace();return;}
   if(focus.type==='lamp'){
     const before=analyze(puzzle);puzzle=toggleLamp(puzzle,focus.id);audio.switch(puzzle.enabled[focus.id]);const after=analyze(puzzle);
     if(!before.balanced&&after.balanced){audio.unlock();say('The beam settles. The far doorway opens.');}
@@ -371,14 +427,16 @@ function act(){
   }else if(analyze(puzzle).balanced){end();return;}else say('Four empty outlines in the door. The receiver hums behind you.');
   sync();
 }
-function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('A thin line leaves the pedestal and runs behind the screens.');sync();}
+function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('The contact sends a pulse down its cable.');sync();}
 function end(){if(ending)return;releaseMouse();ending=true;playing=false;finished=true;clearInput();$('#transition').classList.add('active');setTimeout(()=>{$('#hud').hidden=true;$('#ending').hidden=false;if(world)world.intro=true;$('#ending').focus({preventScroll:true});$('#transition').classList.remove('active');window.scrollTo(0,0);},still?0:330);}
-function pick(){
-  if(!world)return null;const c=world.camera,dir=[Math.sin(c.yaw)*Math.cos(c.pitch),Math.sin(c.pitch),-Math.cos(c.yaw)*Math.cos(c.pitch)];let best=null,score=.88;
-  for(const place of places){const d=place.position.map((v,i)=>v-[c.x,c.y,c.z][i]),length=Math.hypot(...d);if(length>3.1)continue;const dot=d.reduce((n,v,i)=>n+v*dir[i],0)/length;if(dot>score&&lineOfSight([c.x,c.y,c.z],place.position)){score=dot;best=place;}}
-  return best;
+function pick(at=pointer){
+  if(!world)return null;
+  const rect=$('#world').getBoundingClientRect(),locked=document.pointerLockElement===$('#world');
+  const nx=at&&!locked?(at.x-rect.left)/rect.width*2-1:0,ny=at&&!locked?1-(at.y-rect.top)/rect.height*2:0;
+  return pickMechanism(world.camera,viewRay(world.camera,nx,ny,rect.width/rect.height),targets);
 }
-$('#start').addEventListener('click',start);$('#again').addEventListener('click',start);$('#restart').addEventListener('click',start);$('#interact').addEventListener('click',act);$('#trace').addEventListener('click',trace);
+function useMechanism(target){if(!target)return;focus=target;act();}
+$('#start').addEventListener('click',start);$('#again').addEventListener('click',start);$('#restart').addEventListener('click',start);$('#interact').addEventListener('click',()=>useMechanism(focus?.type==='lamp'?targets.find(t=>t.type==='lamp'&&t.kind==='shutter'&&t.id===focus.id):focus));$('#trace').addEventListener('click',trace);
 $('.wordmark').addEventListener('click',e=>e.preventDefault());
 $('#place').addEventListener('change',e=>visit(e.target.value));$('#previous-place').addEventListener('click',()=>visit(placeIndex-1));$('#next-place').addEventListener('click',()=>visit(placeIndex+1));
 function setSound(enabled){audio.setEnabled(enabled);$('#sound-enabled').checked=enabled;$('#sound-button').textContent=enabled?'Sound on':'Sound off';$('#sound-button').setAttribute('aria-pressed',String(enabled));if(enabled&&playing)audio.start().then(()=>audio.update(analyze(puzzle).counts,world?.camera)).catch(()=>{});}
@@ -396,20 +454,31 @@ window.addEventListener('keydown',e=>{
   if(!playing||$('#settings').open||ending||['INPUT','SELECT','A'].includes(e.target.tagName))return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   if(k==='e'||e.code==='Space'){if(e.code==='Space'&&e.target.tagName==='BUTTON')return;e.preventDefault();if(!e.repeat)act();return;}
-  if(k==='q'){e.preventDefault();if(!e.repeat)trace();return;}
   if(controlKeys.includes(k)&&!guided&&!textMode){e.preventDefault();keys.add(k);}
 });
 window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));window.addEventListener('blur',()=>{clearInput();releaseMouse();});document.addEventListener('visibilitychange',()=>{clearInput();if(document.hidden)releaseMouse();last=0;if(audio.ready){if(document.hidden)audio.context.suspend();else if(audio.enabled&&playing)audio.context.resume().catch(()=>{});}});
 for(const b of document.querySelectorAll('[data-control]')){b.addEventListener('pointerdown',e=>{if(!playing||$('#settings').open||guided||textMode)return;e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.control);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>keys.delete(b.dataset.control));}
 $('#world').addEventListener('pointerdown',e=>{
-  if(!playing||$('#settings').open||guided||textMode)return;
+  if(!playing||$('#settings').open||textMode||e.button!==0)return;
+  suppressClick=false;
   if(document.pointerLockElement===$('#world'))return;
-  if(e.pointerType==='mouse')requestMouse();
-  drag={x:e.clientX,y:e.clientY};$('#world').setPointerCapture(e.pointerId);
+  pointer={x:e.clientX,y:e.clientY};pointerDown={...pointer};aimUI();
+  if(!guided){drag={...pointer};$('#world').setPointerCapture(e.pointerId);}
 });
-$('#world').addEventListener('pointermove',e=>{if(document.pointerLockElement===$('#world')||!drag||!world)return;rotateLook(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};});
+$('#world').addEventListener('pointermove',e=>{
+  if(document.pointerLockElement===$('#world'))return;
+  pointer={x:e.clientX,y:e.clientY};aimUI();
+  if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>6)suppressClick=true;
+  if(!drag||!world||guided)return;rotateLook(e.clientX-drag.x,e.clientY-drag.y);drag={...pointer};
+});
+$('#world').addEventListener('click',e=>{
+  if(!playing||ending||$('#settings').open||textMode||suppressClick)return;
+  const at={x:e.clientX,y:e.clientY},target=pick(at);
+  if(target)useMechanism(target);else if(!guided)requestMouse();
+});
+$('#world').addEventListener('pointerleave',()=>{pointer=null;aimUI();});
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement===$('#world')&&playing&&!$('#settings').open&&!guided&&!textMode)rotateLook(e.movementX,e.movementY);});
-for(const event of ['pointerup','pointercancel','lostpointercapture'])$('#world').addEventListener(event,()=>drag=null);
+for(const event of ['pointerup','pointercancel','lostpointercapture'])$('#world').addEventListener(event,()=>{drag=null;pointerDown=null;if(event==='pointercancel')suppressClick=true;});
 window.addEventListener('resize',()=>world?.resize());
 function frame(now){
   const dt=last?Math.min((now-last)/1000,.05):0;last=now;elapsed+=dt;$('#whisper').classList.toggle('visible',elapsed<captionUntil);

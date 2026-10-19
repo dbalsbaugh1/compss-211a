@@ -1,32 +1,36 @@
 import {Observatory} from './world.mjs';
 import {ChamberSound} from './sound.mjs';
 import {fieldNotes} from './story.mjs';
-import {createPuzzle,analyze,toggleLamp,landmarks,lampNames,sourceNames,canStand,lineOfSight} from './simulation.mjs';
-const $=s=>document.querySelector(s),keys=new Set(),places=landmarks(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+import {createPuzzle,analyze,toggleLamp,landmarks,lampNames,sourceNames,canStand,mechanisms,pickMechanism,viewRay} from './simulation.mjs';
+const $=s=>document.querySelector(s),keys=new Set(),places=landmarks(),targets=mechanisms(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
 const audio=new ChamberSound();
-let audioLast=0,stepDistance=0,captureMouse=true,captureUnavailable=false;
+let audioLast=0,stepDistance=0,captureMouse=true,captureUnavailable=false,pointer=null,pointerDown=null,suppressClick=false;
 let world,puzzle,playing=false,finished=false,guided=false,still=reduced.matches,textMode=false,drag=null,last=0,elapsed=0,captionUntil=0,focus=null,placeIndex=12,traced=null,pulsed=null,hintCount=0,ending=false,knownSources=new Set();
 try{world=new Observatory($('#world'));}catch{textMode=true;document.body.classList.add('text-mode');$('#text-mode').checked=true;$('#text-mode').disabled=true;$('#text-mode').closest('label').querySelector('small').textContent='3D is unavailable here. Explore the same circuit in text.';}
 $('#still').checked=still;
 $('#place').innerHTML=places.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('');
-function clearInput(){keys.clear();drag=null;}
+function clearInput(){keys.clear();drag=null;pointerDown=null;}
 function releaseMouse(){if(document.pointerLockElement===($('#world')))document.exitPointerLock();}
 function canCaptureMouse(){return captureMouse&&!captureUnavailable&&matchMedia('(pointer:fine)').matches&&typeof $('#world').requestPointerLock==='function';}
 function mouseUI(){
   const locked=document.pointerLockElement===$('#world');document.body.classList.toggle('mouse-captured',locked);
-  $('#look-status').textContent=locked?'Esc releases the cursor':canCaptureMouse()?'Click scene to capture mouse':'Drag to look';
+  $('#look-status').textContent=locked?'Click a mechanism · Esc releases the cursor':'Click a mechanism · Drag to look';
 }
 function captureFailure(error){
   if(error?.message)console.warn('Mouse capture:',error.message);
   captureUnavailable=error?.name==='SecurityError'||error?.name==='NotSupportedError';
-  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click inside the scene to capture the mouse. You can also drag to look.');
+  clearInput();mouseUI();if(playing)say(captureUnavailable?'Mouse capture is unavailable here. Drag to look, or use the arrow keys.':'Click a mechanism to use it. Drag to look around.');
 }
 function requestMouse(){
   if(!playing||guided||textMode||$('#settings').open||!canCaptureMouse()||document.pointerLockElement===$('#world'))return;
   try{const request=$('#world').requestPointerLock();if(request&&typeof request.catch==='function')request.catch(captureFailure);}catch{captureFailure();}
 }
 function rotateLook(x,y){if(!world)return;world.camera.yaw+=x*.0028;world.camera.pitch=Math.max(-1,Math.min(.8,world.camera.pitch-y*.0025));}
-document.addEventListener('pointerlockchange',()=>{clearInput();mouseUI();});
+function aimUI(){
+  const free=pointer&&document.pointerLockElement!==$('#world');document.body.classList.toggle('free-pointer',Boolean(free));
+  if(free){document.body.style.setProperty('--aim-x',pointer.x+'px');document.body.style.setProperty('--aim-y',pointer.y+'px');}
+}
+document.addEventListener('pointerlockchange',()=>{clearInput();pointer=null;suppressClick=true;mouseUI();aimUI();});
 document.addEventListener('pointerlockerror',captureFailure);
 function say(text){$('#announcer').textContent=text;$('#whisper').textContent=text;captionUntil=elapsed+8;$('#whisper').classList.add('visible');}
 function pairNames(source){return puzzle.wiring.flatMap((s,i)=>s===source?[lampNames[i]]:[]).join(' and ');}
@@ -35,7 +39,7 @@ function describe(){
   $('#scene-title').textContent=focus.name;
   let description='',clue='';
   if(focus.type==='lamp'){
-    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A beam reaches the central lens. A cable leaves the back of the pedestal.':'Its shutter is closed. The beam is absent, but the cable remains.';
+    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A brass lever sits beside the light. A separate blue contact joins a cable at the foot of the pedestal.':'Its shutter is closed. The brass lever can reopen it. The blue cable contact remains lit below.';
     if(traced===focus.id)clue=`Following this cable leads behind the rear screens to the ${sourceNames[source].toLowerCase()} well.`;
     if(knownSources.has(source))clue=`The ${sourceNames[source].toLowerCase()} well powers this lamp. Its pulse also reaches the ${pairNames(source)}.`;
   }else if(focus.type==='source'){
@@ -50,12 +54,14 @@ function describe(){
 function sync(){
   const result=analyze(puzzle);audio.update(result.counts,world?.camera);
   $('#room-state').textContent=result.balanced?'The doorway is open':'The doorway is sealed';
-  if(world){world.puzzle=puzzle;world.traceLamp=traced;world.pulseSource=pulsed;world.focus=focus;}
+  if(world){world.puzzle=puzzle;world.traceLamp=traced;world.pulseSource=pulsed;world.focus=focus?.kind?focus:null;}
   $('#guided-navigation').hidden=!(guided||textMode);$('#scene-description').hidden=!textMode;
-  const label=!focus?'Walk close and look at an object':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Close lamp shutter':'Open lamp shutter'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
+  const label=!focus?'Approach a mechanism':focus.type==='lamp'?(puzzle.enabled[focus.id]?'Lower shutter lever':'Raise shutter lever'):focus.type==='source'?'Pulse the well':focus.type==='receiver'?'Listen to the beam':result.balanced?'Step through':'Inspect doorway';
   $('#action-label').textContent=label;$('#interact').disabled=!focus;
   $('#trace').hidden=focus?.type!=='lamp';
-  $('#target-label').textContent=focus?.name||'';$('#target-label').hidden=!focus||textMode;
+  $('#target-label').textContent=focus?.kind?focus.name:'';$('#target-label').hidden=!focus?.kind||textMode;
+  document.body.classList.toggle('has-target',Boolean(focus?.kind));
+  $('#world').classList.toggle('mechanism-hover',Boolean(focus?.kind));
   if(textMode)describe();
 }
 function visit(index){
@@ -73,6 +79,7 @@ function start(){
 function act(){
   if(!playing||ending||$('#settings').open||!focus)return;
   clearInput();
+  if(focus.type==='lamp'&&focus.kind==='contact'){trace();return;}
   if(focus.type==='lamp'){
     const before=analyze(puzzle);puzzle=toggleLamp(puzzle,focus.id);audio.switch(puzzle.enabled[focus.id]);const after=analyze(puzzle);
     if(!before.balanced&&after.balanced){audio.unlock();say('The beam settles. The far doorway opens.');}
@@ -85,14 +92,16 @@ function act(){
   }else if(analyze(puzzle).balanced){end();return;}else say('Four empty outlines in the door. The receiver hums behind you.');
   sync();
 }
-function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('A thin line leaves the pedestal and runs behind the screens.');sync();}
+function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('The contact sends a pulse down its cable.');sync();}
 function end(){if(ending)return;releaseMouse();ending=true;playing=false;finished=true;clearInput();$('#transition').classList.add('active');setTimeout(()=>{$('#hud').hidden=true;$('#ending').hidden=false;if(world)world.intro=true;$('#ending').focus({preventScroll:true});$('#transition').classList.remove('active');window.scrollTo(0,0);},still?0:330);}
-function pick(){
-  if(!world)return null;const c=world.camera,dir=[Math.sin(c.yaw)*Math.cos(c.pitch),Math.sin(c.pitch),-Math.cos(c.yaw)*Math.cos(c.pitch)];let best=null,score=.88;
-  for(const place of places){const d=place.position.map((v,i)=>v-[c.x,c.y,c.z][i]),length=Math.hypot(...d);if(length>3.1)continue;const dot=d.reduce((n,v,i)=>n+v*dir[i],0)/length;if(dot>score&&lineOfSight([c.x,c.y,c.z],place.position)){score=dot;best=place;}}
-  return best;
+function pick(at=pointer){
+  if(!world)return null;
+  const rect=$('#world').getBoundingClientRect(),locked=document.pointerLockElement===$('#world');
+  const nx=at&&!locked?(at.x-rect.left)/rect.width*2-1:0,ny=at&&!locked?1-(at.y-rect.top)/rect.height*2:0;
+  return pickMechanism(world.camera,viewRay(world.camera,nx,ny,rect.width/rect.height),targets);
 }
-$('#start').addEventListener('click',start);$('#again').addEventListener('click',start);$('#restart').addEventListener('click',start);$('#interact').addEventListener('click',act);$('#trace').addEventListener('click',trace);
+function useMechanism(target){if(!target)return;focus=target;act();}
+$('#start').addEventListener('click',start);$('#again').addEventListener('click',start);$('#restart').addEventListener('click',start);$('#interact').addEventListener('click',()=>useMechanism(focus?.type==='lamp'?targets.find(t=>t.type==='lamp'&&t.kind==='shutter'&&t.id===focus.id):focus));$('#trace').addEventListener('click',trace);
 $('.wordmark').addEventListener('click',e=>e.preventDefault());
 $('#place').addEventListener('change',e=>visit(e.target.value));$('#previous-place').addEventListener('click',()=>visit(placeIndex-1));$('#next-place').addEventListener('click',()=>visit(placeIndex+1));
 function setSound(enabled){audio.setEnabled(enabled);$('#sound-enabled').checked=enabled;$('#sound-button').textContent=enabled?'Sound on':'Sound off';$('#sound-button').setAttribute('aria-pressed',String(enabled));if(enabled&&playing)audio.start().then(()=>audio.update(analyze(puzzle).counts,world?.camera)).catch(()=>{});}
@@ -110,20 +119,31 @@ window.addEventListener('keydown',e=>{
   if(!playing||$('#settings').open||ending||['INPUT','SELECT','A'].includes(e.target.tagName))return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   if(k==='e'||e.code==='Space'){if(e.code==='Space'&&e.target.tagName==='BUTTON')return;e.preventDefault();if(!e.repeat)act();return;}
-  if(k==='q'){e.preventDefault();if(!e.repeat)trace();return;}
   if(controlKeys.includes(k)&&!guided&&!textMode){e.preventDefault();keys.add(k);}
 });
 window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));window.addEventListener('blur',()=>{clearInput();releaseMouse();});document.addEventListener('visibilitychange',()=>{clearInput();if(document.hidden)releaseMouse();last=0;if(audio.ready){if(document.hidden)audio.context.suspend();else if(audio.enabled&&playing)audio.context.resume().catch(()=>{});}});
 for(const b of document.querySelectorAll('[data-control]')){b.addEventListener('pointerdown',e=>{if(!playing||$('#settings').open||guided||textMode)return;e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.control);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>keys.delete(b.dataset.control));}
 $('#world').addEventListener('pointerdown',e=>{
-  if(!playing||$('#settings').open||guided||textMode)return;
+  if(!playing||$('#settings').open||textMode||e.button!==0)return;
+  suppressClick=false;
   if(document.pointerLockElement===$('#world'))return;
-  if(e.pointerType==='mouse')requestMouse();
-  drag={x:e.clientX,y:e.clientY};$('#world').setPointerCapture(e.pointerId);
+  pointer={x:e.clientX,y:e.clientY};pointerDown={...pointer};aimUI();
+  if(!guided){drag={...pointer};$('#world').setPointerCapture(e.pointerId);}
 });
-$('#world').addEventListener('pointermove',e=>{if(document.pointerLockElement===$('#world')||!drag||!world)return;rotateLook(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};});
+$('#world').addEventListener('pointermove',e=>{
+  if(document.pointerLockElement===$('#world'))return;
+  pointer={x:e.clientX,y:e.clientY};aimUI();
+  if(pointerDown&&Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>6)suppressClick=true;
+  if(!drag||!world||guided)return;rotateLook(e.clientX-drag.x,e.clientY-drag.y);drag={...pointer};
+});
+$('#world').addEventListener('click',e=>{
+  if(!playing||ending||$('#settings').open||textMode||suppressClick)return;
+  const at={x:e.clientX,y:e.clientY},target=pick(at);
+  if(target)useMechanism(target);else if(!guided)requestMouse();
+});
+$('#world').addEventListener('pointerleave',()=>{pointer=null;aimUI();});
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement===$('#world')&&playing&&!$('#settings').open&&!guided&&!textMode)rotateLook(e.movementX,e.movementY);});
-for(const event of ['pointerup','pointercancel','lostpointercapture'])$('#world').addEventListener(event,()=>drag=null);
+for(const event of ['pointerup','pointercancel','lostpointercapture'])$('#world').addEventListener(event,()=>{drag=null;pointerDown=null;if(event==='pointercancel')suppressClick=true;});
 window.addEventListener('resize',()=>world?.resize());
 function frame(now){
   const dt=last?Math.min((now-last)/1000,.05):0;last=now;elapsed+=dt;$('#whisper').classList.toggle('visible',elapsed<captionUntil);

@@ -18,3 +18,9 @@ dialog{border:1px solid #68828d77;box-shadow:0 20px 100px #020d17aa;border-radiu
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
 .look-hint{position:absolute;right:42px;bottom:27px;margin:0;font-size:9px;color:#a3b8c3;pointer-events:none}.mouse-captured #world{cursor:none}.mouse-captured .top-actions{opacity:.3;pointer-events:none}.mouse-captured .interaction{pointer-events:none}.mouse-captured .chapter{opacity:.65}.text-mode .look-hint,.guided .look-hint{display:none}@media(max-width:600px),(pointer:coarse){.look-hint{display:none}}
+
+/* In walking mode, actions belong to the instruments themselves. */
+.interaction{display:none}.guided .interaction,.text-mode .interaction{display:flex}
+#world.mechanism-hover{cursor:pointer}.mouse-captured #world.mechanism-hover{cursor:none}
+.has-target #reticle{width:19px;height:19px;border-color:#f4ddb0;box-shadow:0 0 12px #f1ca7944}
+.free-pointer #reticle{display:none}.free-pointer #target-label{left:var(--aim-x);top:calc(var(--aim-y) + 24px)}

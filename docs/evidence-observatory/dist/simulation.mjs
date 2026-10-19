@@ -16,7 +16,36 @@ export function analyze(puzzle){
 }
 export function toggleLamp(puzzle,id){if(!Number.isInteger(id)||id<0||id>7)return puzzle;return {...puzzle,enabled:puzzle.enabled.map((on,i)=>i===id?!on:on)};}
 export function receiverPosition(source){const a=source*Math.PI/2+Math.PI/4;return [Math.cos(a)*1.05,2.45+Math.sin(a)*1.05,-3.8];}
-export function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [[p[0],.025,p[2]],[lane,.025,p[2]],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+export function shutterPosition(id){const p=lampPositions[id];return [p[0]-Math.sign(p[0])*.38,1.06,p[2]];}
+export function contactPosition(id){const p=lampPositions[id];return [p[0],.48,p[2]+.29];}
+export function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [contactPosition(id),[p[0],.025,p[2]+.42],[lane,.025,p[2]+.42],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+// The same positions drive rendered mechanisms and click targets.
+export function mechanisms(){return [
+  ...lampPositions.flatMap((p,id)=>[
+    {type:'lamp',kind:'shutter',id,name:'Shutter lever',position:shutterPosition(id),radius:.23,normal:[-Math.sign(p[0]),0,0]},
+    {type:'lamp',kind:'contact',id,name:'Cable contact',position:contactPosition(id),radius:.22,normal:[0,0,1]}
+  ]),
+  ...sourcePositions.map((p,id)=>({type:'source',kind:'well',id,name:'Well plunger',position:p,radius:.35,normal:[0,1,0]})),
+  {type:'receiver',kind:'receiver',id:0,name:'Listening plate',position:[0,1.05,-2.55],radius:.34,normal:[0,0,1]},
+  {type:'door',kind:'door',id:0,name:'Door seal',position:[0,1.5,-11.5],radius:.7,normal:[0,0,1]}
+];}
+export function viewRay(camera,nx=0,ny=0,aspect=1){
+  const sy=Math.sin(camera.yaw),cy=Math.cos(camera.yaw),sp=Math.sin(camera.pitch),cp=Math.cos(camera.pitch),f=Math.tan(Math.PI/6);
+  const dir=[sy*cp+nx*f*aspect*cy-ny*f*sy*sp,sp+ny*f*cp,-cy*cp+nx*f*aspect*sy+ny*f*cy*sp],length=Math.hypot(...dir);
+  return dir.map(v=>v/length);
+}
+export function pickMechanism(camera,dir,targets=mechanisms()){
+  const eye=[camera.x,camera.y,camera.z];let best=null,nearest=Infinity;
+  for(const target of targets){
+    const offset=target.position.map((v,i)=>v-eye[i]),distance=Math.hypot(...offset);
+    if(distance>2.8||!lineOfSight(eye,target.position)||offset.reduce((sum,v,i)=>sum+v*target.normal[i],0)>=0)continue;
+    const along=offset.reduce((sum,v,i)=>sum+v*dir[i],0),miss=distance*distance-along*along;
+    if(along<=0||miss>target.radius*target.radius)continue;
+    const hit=along-Math.sqrt(Math.max(0,target.radius*target.radius-miss));
+    if(hit<nearest){nearest=hit;best=target;}
+  }
+  return best;
+}
 export function canStand(x,z){
   if(x< -6.3||x>6.3||z< -11.2||z>8.2)return false;
   if(Math.hypot(x,z+3.8)<1.65)return false;
