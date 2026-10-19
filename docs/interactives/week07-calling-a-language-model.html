@@ -109,6 +109,11 @@ footer{border-top:1px solid var(--line);padding:18px 0 30px;font-size:.85rem;col
 .fig .model{background:var(--navy)}
 .fig .model b{color:white}
 .fig .op{color:var(--muted);font-weight:700}
+.fig-call{display:grid;grid-template-columns:minmax(0,1.1fr) auto minmax(0,1.2fr) auto auto auto minmax(0,1fr);gap:6px;padding:10px}
+.fig-call .box{min-width:0;padding:8px}
+.fig-call .box b{overflow-wrap:anywhere}
+.fig-call .model{text-align:center}
+@media(max-width:600px){.fig-call{grid-template-columns:minmax(0,1fr)}.fig-call .op{text-align:center}.fig-call .arrow{transform:rotate(90deg)}}
 .fig-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .fig-compare h5{margin:0 0 6px;font-size:.88rem;color:var(--navy)}
 .fig-compare pre.out{margin:0;background:white}
@@ -213,14 +218,14 @@ const PROMPT_C1 = 'prompt = build_prompt(text=comments["C1"])';
 const LOOP = 'gemini_labels = {}\nfor comment_id, text in comments.items():\n    prompt = build_prompt(text=text)\n    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=CONFIG)\n    answer = json.loads(response.text)\n    gemini_labels[comment_id] = answer["label"]';
 
 // Small diagrams shown above a step's text.
-const FIG_CALL = `<div class="fig" role="img" aria-label="One call sends the task and codebook as the system instruction, and the post and comment as the user message. The answer returns in response.text.">
-  <div class="box same"><b>SYSTEM</b><span>the task and the codebook</span><span class="dim">the same for every comment</span></div>
+const FIG_CALL = `<div class="fig fig-call" role="img" aria-label="One call sends the task and codebook as the system instruction, and the post and comment as the user message. The answer returns in response.text.">
+  <div class="box same"><b>SYSTEM</b><span>task + codebook</span><span class="dim">same rules each time</span></div>
   <span class="op">+</span>
-  <div class="box changes"><b>prompt</b><span>post + one comment</span><span class="dim">the user message; the comment changes</span></div>
-  <span class="op">→</span>
+  <div class="box changes"><b>prompt</b><span>post + one comment</span><span class="dim">user message</span></div>
+  <span class="op arrow">→</span>
   <div class="box model"><b>Gemini</b></div>
-  <span class="op">→</span>
-  <div class="box"><b>response.text</b><span>the answer, as text</span></div>
+  <span class="op arrow">→</span>
+  <div class="box"><b>response.text</b><span>answer as text</span></div>
 </div>`;
 const FIG_SCHEMA = `<div class="fig fig-compare">
   <div><h5>Without a schema: a sentence</h5><pre class="out">I would label this comment poster_at_fault. The commenter points out that taking someone else's property …</pre></div>
