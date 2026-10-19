@@ -3,6 +3,7 @@ export const lampPositions=[[-3.9,1.5,4.3],[-3.9,1.5,.7],[-3.9,1.5,-3],[-3.9,1.5
 export const lampNames=['West entrance lamp','West middle lamp','West rear lamp','West alcove lamp','East entrance lamp','East middle lamp','East rear lamp','East alcove lamp'];
 export const sourcePositions=[[-4.2,.55,-9.3],[-1.4,.55,-9.3],[1.4,.55,-9.3],[4.2,.55,-9.3]];
 export const sourceNames=['Hollow circle','Diamond','Cross','Three bars'];
+export const sourceColors=['#80c9cc','#e4bb75','#a9a6d9','#dd927f'];
 export function createPuzzle(seed=1){
   let n=seed>>>0;const rand=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};
   let wiring;
@@ -18,7 +19,26 @@ export function toggleLamp(puzzle,id){if(!Number.isInteger(id)||id<0||id>7)retur
 export function receiverPosition(source){const a=source*Math.PI/2+Math.PI/4;return [Math.cos(a)*1.05,2.45+Math.sin(a)*1.05,-3.8];}
 export function shutterPosition(id){const p=lampPositions[id];return [p[0]-Math.sign(p[0])*.38,1.06,p[2]];}
 export function contactPosition(id){const p=lampPositions[id];return [p[0],.48,p[2]+.29];}
-export function cablePath(puzzle,id){const p=lampPositions[id],well=sourcePositions[puzzle.wiring[id]],side=Math.sign(p[0]),lane=side*(5.2+(id%4)*.08);return [contactPosition(id),[p[0],.025,p[2]+.42],[lane,.025,p[2]+.42],[lane,.025,-8.7],[well[0],.025,-8.7],[well[0],.025,well[2]]];}
+export function wellPort(puzzle,id){
+  const source=puzzle.wiring[id],well=sourcePositions[source],first=puzzle.wiring.indexOf(source)===id;
+  return [well[0]+(first?-.19:.19),.25,well[2]+.4];
+}
+export function cablePath(puzzle,id){
+  const p=lampPositions[id],source=puzzle.wiring[id],well=sourcePositions[source],port=wellPort(puzzle,id),side=Math.sign(p[0]);
+  // Separate side lanes and rear rows; different heights keep crossings unjoined.
+  const lane=side*(5.1+(id%4)*.3),height=.065+source*.045,rear=-10.05-source*.27,branch=well[0]+Math.sign(port[0]-well[0])*.66;
+  return [contactPosition(id),[p[0],height,p[2]+.55],[lane,height,p[2]+.55],[lane,height,rear],[branch,height,rear],[branch,height,well[2]+.7],[port[0],height,well[2]+.7],port,[well[0],.25,well[2]]];
+}
+export function cableLength(path){return path.slice(1).reduce((sum,p,i)=>sum+Math.hypot(...p.map((v,j)=>v-path[i][j])),0);}
+export function cablePoint(path,distance,fromWell=false){
+  const route=fromWell?[...path].reverse():path;let remaining=Math.max(0,distance);
+  for(let i=1;i<route.length;i++){
+    const a=route[i-1],b=route[i],length=Math.hypot(...b.map((v,j)=>v-a[j]));
+    if(remaining<=length)return a.map((v,j)=>v+(b[j]-v)*(length?remaining/length:0));
+    remaining-=length;
+  }
+  return [...route.at(-1)];
+}
 // The same positions drive rendered mechanisms and click targets.
 export function mechanisms(){return [
   ...lampPositions.flatMap((p,id)=>[

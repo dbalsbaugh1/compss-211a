@@ -1,5 +1,5 @@
 import {Atmosphere} from './atmosphere.mjs';
-import {createPuzzle,analyze,lampPositions,sourcePositions,receiverPosition,cablePath,shutterPosition,contactPosition,mechanisms,lineOfSight} from './simulation.mjs';
+import {createPuzzle,analyze,lampPositions,sourcePositions,sourceColors,receiverPosition,cablePath,cableLength,cablePoint,wellPort,shutterPosition,contactPosition,mechanisms,lineOfSight} from './simulation.mjs';
 // Small, dependency-free WebGL scene. All geometry and materials are made here.
 const VERTEX=`attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uProjection;uniform mat4 uView;uniform mat4 uModel;varying vec3 vNormal;varying vec3 vWorld;void main(){vec4 p=uModel*vec4(aPosition,1.);vWorld=p.xyz;vNormal=normalize(mat3(uModel)*aNormal);gl_Position=uProjection*uView*p;}`;
 const FRAGMENT=`precision mediump float;uniform vec3 uColor;uniform vec3 uCamera;uniform float uGlow;uniform vec3 uFog;uniform vec4 uLamps[8];uniform float uTime;uniform float uSurface;uniform float uOpacity;uniform float uOpen;varying vec3 vNormal;varying vec3 vWorld;
@@ -75,14 +75,28 @@ export class Observatory {
       if(count===1)this.draw('ring',position,[.38,.38,.38],'#b7eee1',0,0,.8);
       if(count>1){for(let j=0;j<count;j++){const offset=this.still?(j-.5)*.12:Math.sin(t*3+j*Math.PI)*.1;this.draw('ring',[position[0]+offset,position[1],position[2]+j*.04],[.38*pulse,.38*pulse,.38],j%2?'#e4816f':'#f4cea3',0,0,.5);}this.draw('cube',position,[.055,.55,.055],'#b6677b',.4,.7);}
     }
+    const activeSource=this.pulseSource??(this.traceLamp===null?null:this.puzzle.wiring[this.traceLamp]);
+    if(this.routeWiring!==this.puzzle.wiring){this.routeWiring=this.puzzle.wiring;this.routes=lampPositions.map((_,id)=>cablePath(this.puzzle,id));this.routeLengths=this.routes.map(cableLength);}
+    const pairedLengths=this.routeLengths.filter((_,id)=>this.puzzle.wiring[id]===activeSource),longest=Math.max(1,...pairedLengths);
+    const linkTime=Math.max(0,seconds-(this.linkPulseAt||0)),travel=(linkTime%((longest+5)/3.4))*3.4;
+    const sharedGlow=this.still?1:.78+Math.cos(linkTime*Math.PI*1.6)*.14;
     for(let id=0;id<8;id++){
       const position=lampPositions[id],source=this.puzzle.wiring[id],on=this.puzzle.enabled[id],side=Math.sign(position[0]);
       this.shutterOpen??=this.puzzle.enabled.map(Number);this.shutterOpen[id]=this.still?Number(on):this.shutterOpen[id]+(Number(on)-this.shutterOpen[id])*Math.min(1,delta*10);const openness=this.shutterOpen[id];
-      const chosen=this.traceLamp===id||this.pulseSource===source;
-      const path=cablePath(this.puzzle,id);
-      for(let k=1;k<path.length;k++)this.thread(path[k-1],path[k],chosen?'#e1b56c':'#5a7183',chosen?.045:.014);
-      if(chosen&&!this.still){const route=(t*.42)% (path.length-1),segment=Math.floor(route),k=route-segment;const point=path[segment].map((v,i)=>v+(path[segment+1][i]-v)*k);this.draw('sphere',[point[0],point[1]+.055,point[2]],[.07,.07,.07],'#fff7ce',0,0,1);}
+      const chosen=source===activeSource,tint=sourceColors[source],path=this.routes[id];
+      for(let k=1;k<path.length;k++){
+        const bed=p=>[p[0],p[1]-.07,p[2]-.07];
+        this.thread(bed(path[k-1]),bed(path[k]),'#142b36',.13,.05);
+        this.thread(path[k-1],path[k],tint,chosen?.085:.045,chosen?.92:activeSource===null?.45:.18);
+      }
+      if(chosen&&!this.still)for(let packet=0;packet<3;packet++){
+        const distance=travel-packet*1.4;if(distance<0||distance>this.routeLengths[id])continue;
+        const lifted=p=>[p[0],p[1]+.045,p[2]+.035],point=lifted(cablePoint(path,distance,true)),tail=lifted(cablePoint(path,Math.max(0,distance-.65),true));
+        this.thread(tail,point,'#ecf4db',.055,1);
+        this.draw('sphere',point,[.055,.055,.055],'#ecf4db',0,0,1);
+      }
       this.draw('cylinder',[position[0],.1,position[2]],[.4,.2,.4],'#526374');
+      this.draw('ring',[position[0],.13,position[2]],[.42,.42,.42],chosen?tint:'#506577',0,Math.PI/2,chosen?sharedGlow:.12);
       this.draw('cube',[position[0],.83,position[2]],[.44,1.4,.44],'#475969');
       const lever=shutterPosition(id),contact=contactPosition(id),handleCue=this.controlCue('shutter',id),contactCue=this.controlCue('contact',id);
       this.draw('cube',[position[0]-side*.24,lever[1],position[2]],[.06,.46,.28],'#263c4c');
@@ -93,24 +107,30 @@ export class Observatory {
       this.draw('ring',[grip[0]-side*.065,grip[1],grip[2]],[.052,.052,.052],'#97d8d2',side*Math.PI/2,0,.35+handleCue.light*.4);
       this.draw('cube',[contact[0],contact[1],contact[2]-.045],[.34,.3,.07],'#273d4a');
       this.draw('ring',contact,[.14,.14,.14],'#b29c73',0,0,.12);
-      this.draw('ring',[contact[0],contact[1],contact[2]+.007],[.108,.108,.108],'#97d8d2',0,0,.35+contactCue.light*.4);
+      this.draw('ring',[contact[0],contact[1],contact[2]+.007],[.108,.108,.108],tint,0,0,chosen?sharedGlow:.35+contactCue.light*.4);
       this.draw('sphere',[contact[0],contact[1],contact[2]+.025-contactCue.press*.035],[.085,.085,.045],'#dce5db',0,0,.08+contactCue.press*.16,3);
+      this.glyph(source,[contact[0],contact[1],contact[2]+.074-contactCue.press*.035],.3,0,tint);
       this.glyph(source,[position[0]+side*.245,.94,position[2]],.9,side*Math.PI/2,'#bcbca5');
       const rhythm=this.still?1:1+Math.sin(t*(1.2+source*.4))*.1;
       this.draw('sphere',position,[.18*rhythm,.18*rhythm,.18*rhythm],on?'#ffe0a2':'#324251',0,0,on?.8:0);
-      this.draw('ring',position,[.3,.3,.3],chosen?'#ffffff':on?'#e8b779':'#5d737f',0,0,.4);
+      this.draw('ring',position,[.3,.3,.3],chosen?tint:on?'#e8b779':'#5d737f',0,0,chosen?sharedGlow:.4);
       // Two metal leaves close over the light; the nearby lever stays operable.
       for(const blade of [-1,1])this.draw('cube',[position[0]+blade*(.13+openness*.27),position[1],position[2]+.21],[.25,.48,.065],on?'#77827c':'#a59574',0,blade*.24*openness);
       if(on)this.thread(position,receiverPosition(source),analysis.counts[source]>1?'#dfb17e':'#b9e2e3',.016);
     }
     for(let source=0;source<4;source++){
-      const pos=sourcePositions[source],selected=this.pulseSource===source||this.traceLamp!==null&&this.puzzle.wiring[this.traceLamp]===source,cue=this.controlCue('well',source);
+      const pos=sourcePositions[source],selected=activeSource===source,cue=this.controlCue('well',source),tint=sourceColors[source];
       this.draw('cylinder',[pos[0],.22,pos[2]],[.44,.44,.44],'#425667');
-      this.draw('ring',[pos[0],.46,pos[2]],[.46,.46,.46],selected?'#fff2b9':'#7f9ca5',0,Math.PI/2,.6);
-      this.glyph(source,[pos[0],.95,pos[2]],1.5,0,selected?'#fff1bf':'#c8cfc5');
+      this.draw('ring',[pos[0],.46,pos[2]],[.46,.46,.46],tint,0,Math.PI/2,selected?sharedGlow:.4);
+      this.glyph(source,[pos[0],.95,pos[2]],1.5,0,tint);
+      for(let id=0;id<8;id++)if(this.puzzle.wiring[id]===source){
+        const port=wellPort(this.puzzle,id);
+        this.draw('ring',port,[.075,.075,.075],'#b69d73',0,0,.18);
+        this.draw('ring',[port[0],port[1],port[2]+.008],[.052,.052,.052],tint,0,0,selected?sharedGlow:.4);
+      }
       this.draw('cylinder',[pos[0],.49,pos[2]],[.17,.07,.17],'#ae966d');
       this.draw('sphere',[pos[0],.56-cue.press*.04,pos[2]],[.13,.065,.13],'#dce5db',0,0,.08,3);
-      this.draw('ring',[pos[0],.52,pos[2]],[.16,.16,.16],'#97d8d2',0,Math.PI/2,.35+cue.light*.4);
+      this.draw('ring',[pos[0],.52,pos[2]],[.16,.16,.16],tint,0,Math.PI/2,selected?sharedGlow:.35+cue.light*.4);
     }
     this.draw('sphere',[0,.51,-3.8],[.45,.035,.45],this.solved?'#c8eee1':'#eab87a',0,0,1);
     this.draw('cube',[0,.8,-2.63],[.65,.55,.18],'#435968');
@@ -149,12 +169,12 @@ export class Observatory {
     const press=this.press?.kind===kind&&this.press.id===id?Math.max(0,1-(this.time-this.press.at)/.3):0;
     return {light,press:this.still?0:press};
   }
-  thread(from,to,color,width=.02){const delta=to.map((v,i)=>v-from[i]),length=Math.hypot(...delta);if(length<.001)return;this.draw('cube',from.map((v,i)=>(v+to[i])/2),[width,width,length],color,Math.atan2(delta[0],delta[2]),-Math.asin(delta[1]/length),.7);}
+  thread(from,to,color,width=.02,glow=.7){const delta=to.map((v,i)=>v-from[i]),length=Math.hypot(...delta);if(length<.001)return;this.draw('cube',from.map((v,i)=>(v+to[i])/2),[width,width,length],color,Math.atan2(delta[0],delta[2]),-Math.asin(delta[1]/length),glow);}
   glyph(source,pos,size=1,ry=0,color='#f2dbc3'){
     const map=([x,y])=>[pos[0]+Math.cos(ry)*x*size,pos[1]+y*size,pos[2]-Math.sin(ry)*x*size];
     if(source===0){this.draw('ring',pos,[.19*size,.19*size,.19*size],color,ry,0,.7);return;}
     const lines=source===1?[[[0,.22],[.19,0]],[[.19,0],[0,-.22]],[[0,-.22],[-.19,0]],[[-.19,0],[0,.22]]]:source===2?[[[-.2,0],[.2,0]],[[0,-.2],[0,.2]]]:[[[-.16,-.2],[-.16,.2]],[[0,-.2],[0,.2]],[[.16,-.2],[.16,.2]]];
     for(const [from,to]of lines)this.thread(map(from),map(to),color,.035*size);
   }
-  reset(puzzle){this.press=null;this.cueLevels={};this.puzzle=puzzle;this.shutterOpen=puzzle.enabled.map(Number);this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
+  reset(puzzle){this.press=null;this.cueLevels={};this.linkPulseAt=0;this.puzzle=puzzle;this.shutterOpen=puzzle.enabled.map(Number);this.traceLamp=null;this.pulseSource=null;this.solved=false;this.aperture=0;this.camera={x:0,y:1.7,z:7.5,yaw:0,pitch:0};}
 }

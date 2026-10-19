@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {createPuzzle,analyze,toggleLamp,cablePath,sourcePositions,canStand,lineOfSight,landmarks,mechanisms,pickMechanism,viewRay,contactPosition} from './dist/simulation.mjs';
+import {createPuzzle,analyze,toggleLamp,cablePath,cableLength,cablePoint,wellPort,sourcePositions,canStand,lineOfSight,landmarks,mechanisms,pickMechanism,viewRay,contactPosition} from './dist/simulation.mjs';
 const wirings=new Set();
 for(let seed=1;seed<=32;seed++){
   const initial=createPuzzle(seed);wirings.add(initial.wiring.join(''));
@@ -16,6 +16,20 @@ for(let seed=1;seed<=32;seed++){
     const once=toggleLamp(initial,lamp),twice=toggleLamp(once,lamp);
     assert.equal(analyze(once).balanced,false);assert.deepEqual(twice,initial);assert.equal(initial.enabled[lamp],true);
     const end=cablePath(initial,lamp).at(-1),well=sourcePositions[initial.wiring[lamp]];assert.equal(end[0],well[0]);assert.equal(end[2],well[2]);
+    const path=cablePath(initial,lamp),length=cableLength(path);
+    assert.deepEqual(cablePoint(path,0,true),path.at(-1));assert.deepEqual(cablePoint(path,length+1,true),path[0]);
+    assert.deepEqual(path.at(-2),wellPort(initial,lamp),'Every cable must visibly enter its own well outlet');
+    let traveled=0;
+    for(let k=1;k<path.length;k++){
+      traveled+=Math.hypot(...path[k].map((v,j)=>v-path[k-1][j]));
+      const point=cablePoint(path,traveled);
+      assert.ok(Math.hypot(...point.map((v,j)=>v-path[k][j]))<1e-8,'Pulses must follow every cable bend without jumping');
+    }
+    assert.ok(path.every(p=>p.every(Number.isFinite)&&Math.abs(p[0])<6.3&&p[2]>-11.2&&p[2]<8.2&&p[1]>=0));
+  }
+  for(let source=0;source<4;source++){
+    const pair=initial.wiring.flatMap((s,id)=>s===source?[id]:[]);
+    assert.equal(pair.length,2);assert.notDeepEqual(wellPort(initial,pair[0]),wellPort(initial,pair[1]),'A well must have two distinct visible outlets');
   }
   const dark={...initial,enabled:Array(8).fill(false)};assert.equal(analyze(dark).balanced,false);assert.equal(analyze(dark).missing,4);
   for(const bank of [0,4]){const half={...initial,enabled:initial.enabled.map((_,i)=>i>=bank&&i<bank+4)};assert.equal(analyze(half).balanced,false);}
@@ -62,4 +76,4 @@ assert.ok(!html.includes('Your next move'));assert.ok(!html.includes('<table'));
 assert.equal(html,await readFile(new URL('./play.html',import.meta.url),'utf8'));
 assert.equal(html,await readFile(new URL('../interactives/echo-chamber.html',import.meta.url),'utf8'));
 assert.ok(html.includes('name="robots" content="noindex,nofollow,noarchive"'));
-console.log('Verified 8,192 circuit configurations, every physical click target, separate lever/contact aiming, approach distance, blocked/back-facing targets, perspective picking, walkable routes, and standalone files.');
+console.log('Verified 8,192 circuit configurations, every physical click target, separate lever/contact aiming, approach distance, blocked/back-facing targets, perspective picking, distinct well outlets, cable continuity and pulse travel, walkable routes, and standalone files.');

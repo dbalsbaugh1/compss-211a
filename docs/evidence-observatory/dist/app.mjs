@@ -38,7 +38,7 @@ function describe(){
   $('#scene-title').textContent=focus.name;
   let description='',clue='';
   if(focus.type==='lamp'){
-    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A brass lever sits beside the light. A separate blue contact joins a cable at the foot of the pedestal.':'Its shutter is closed. The brass lever can reopen it. The blue cable contact remains lit below.';
+    const source=puzzle.wiring[focus.id];description=puzzle.enabled[focus.id]?'Its shutter is open. A brass lever sits beside the light. A separate round contact joins a cable at the foot of the pedestal.':'Its shutter is closed. The brass lever can reopen it. The round cable contact remains lit below.';
     if(traced===focus.id)clue=`Following this cable leads behind the rear screens to the ${sourceNames[source].toLowerCase()} well.`;
     if(knownSources.has(source))clue=`The ${sourceNames[source].toLowerCase()} well powers this lamp. Its pulse also reaches the ${pairNames(source)}.`;
   }else if(focus.type==='source'){
@@ -85,13 +85,13 @@ function act(){
     else if(before.balanced&&!after.balanced)say('The beam changes again. The doorway closes.');
     else say(puzzle.enabled[focus.id]?'A beam joins the lens.':'A beam fades. The lens responds.');
   }else if(focus.type==='source'){
-    pulsed=focus.id;audio.pulse(focus.id);traced=null;knownSources.add(focus.id);say('One well. Two lamps answer with the same pulse.');
+    pulsed=focus.id;if(world)world.linkPulseAt=elapsed;audio.pulse(focus.id);traced=null;knownSources.add(focus.id);say('One well. Two lamps answer with the same pulse.');
   }else if(focus.type==='receiver'){
     const result=analyze(puzzle);say(result.balanced?'Four clear patterns. A steady beam.':result.active===0?'Silence. Every pattern is missing.':result.repeated&&result.missing?'Some patterns repeat. Others are missing.':result.repeated?'A pattern is arriving more than once.':'There are gaps where a pattern should be.');
   }else if(analyze(puzzle).balanced){end();return;}else say('Four empty outlines in the door. The receiver hums behind you.');
   sync();
 }
-function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;if(world)world.press={kind:'contact',id:focus.id,at:elapsed};audio.tone(620,.5,.045);traced=focus.id;pulsed=null;say('The contact sends a pulse down its cable.');sync();}
+function trace(){if(!playing||$('#settings').open||focus?.type!=='lamp')return;if(world){world.press={kind:'contact',id:focus.id,at:elapsed};world.linkPulseAt=elapsed;}audio.tone(620,.5,.045);traced=focus.id;pulsed=null;knownSources.add(puzzle.wiring[focus.id]);say('The contact sends a pulse down its cable.');sync();}
 function end(){if(ending)return;releaseMouse();ending=true;playing=false;finished=true;clearInput();$('#transition').classList.add('active');setTimeout(()=>{$('#hud').hidden=true;$('#ending').hidden=false;if(world)world.intro=true;$('#ending').focus({preventScroll:true});$('#transition').classList.remove('active');window.scrollTo(0,0);},still?0:330);}
 function pick(at=pointer){
   if(!world)return null;
