@@ -3,7 +3,7 @@
 [![Datahub](https://img.shields.io/badge/launch-datahub-blue)](https://datahub.berkeley.edu/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fmacss-berkeley%2Fcompss-211a&branch=main&urlpath=vscode%2F%3Ffolder%3D%2Fhome%2Fjovyan%2Fcompss-211a)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-This repository contains materials for COMPSS 211A: Computing I. The course is for master's students in computational social science, and it is built around the work you will actually need to do: manage files, write and debug Python, collect data, analyze text, collaborate through Git, and explain what your results do and do not show.
+This repository contains the materials for COMPSS 211A: Computing I. The course is for master's students in computational social science, and it is built around the work you will actually need to do: manage files, write and debug Python, collect data, analyze text, collaborate through Git, and explain what your results do and do not show.
 
 During the semester, you will:
 
